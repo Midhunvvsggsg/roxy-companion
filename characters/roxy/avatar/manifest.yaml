@@ -1,0 +1,50 @@
+version: '1.0'
+size:
+- 24
+- 24
+layers:
+  base: base.png
+  blush: blush.png
+eye_states:
+  open: eyes_open.png
+  blink: eyes_blink.png
+  half: eyes_half.png
+mouth_states:
+  neutral: mouth_neutral.png
+  smile: mouth_smile.png
+  open: mouth_open.png
+  pout: mouth_pout.png
+emotions:
+  neutral:
+    eyes: open
+    mouth: neutral
+    blush: false
+  happy:
+    eyes: blink
+    mouth: smile
+    blush: true
+  blush:
+    eyes: half
+    mouth: pout
+    blush: true
+  pout:
+    eyes: open
+    mouth: pout
+    blush: true
+  sad:
+    eyes: half
+    mouth: neutral
+    blush: false
+  surprised:
+    eyes: open
+    mouth: open
+    blush: true
+  thinking:
+    eyes: half
+    mouth: neutral
+    blush: false
+animation:
+  blink_interval_seconds: 3.5
+  blink_duration_seconds: 0.2
+  breathe_cycle_seconds: 3.0
+  breathe_offset_y: 1

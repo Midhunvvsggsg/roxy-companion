@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "kokoro-term"
+version = "0.1.0"
+description = "Anime AI companion for the terminal (Windows & Linux)"
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [{ name = "Kokoro-Term Contributors" }]
+license = { text = "MIT" }
+dependencies = [
+    "httpx>=0.28.1",
+    "numpy>=2.5.4",
+    "pillow>=13.0.0",
+    "pydantic>=2.14.1",
+    "python-dotenv>=1.2.4",
+    "pyyaml>=6.0.3",
+    "send2trash>=2.1.0",
+    "textual>=8.2.8",
+]
+
+[project.scripts]
+kokoro-term = "kokoro_term.main:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+

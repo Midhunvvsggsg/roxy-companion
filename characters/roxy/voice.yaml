@@ -1,0 +1,8 @@
+engine: "kokoro"
+voice_id: "af_sarah"
+speed: 1.05
+pitch: 1.0
+lang: "en-us"
+speech_style:
+  accent: "soft_jp"
+  stutter_on_blush: true
