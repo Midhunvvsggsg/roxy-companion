@@ -29,3 +29,10 @@ avatar:
   enable_animation: true
   fps: 24
   eyebrows: "off"
+
+voice:
+  preset: "mature_mommy"
+  voice: "en-US-AvaNeural"
+  base_pitch: -4
+  base_rate: 0
+  custom_model_path: ""

@@ -51,6 +51,14 @@ class AvatarConfig(BaseModel):
     fps: int = 24
 
 
+class VoiceSettingsConfig(BaseModel):
+    preset: str = "mature_mommy"
+    voice: str = "en-US-AvaNeural"
+    base_pitch: int = -4
+    base_rate: int = 0
+    custom_model_path: str = ""
+
+
 class AppConfig(BaseModel):
     active_character: str = "roxy"
     character_dir: str = "characters"
@@ -58,6 +66,7 @@ class AppConfig(BaseModel):
     memory: MemoryConfig = Field(default_factory=MemoryConfig)
     tools: ToolsConfig = Field(default_factory=ToolsConfig)
     avatar: AvatarConfig = Field(default_factory=AvatarConfig)
+    voice: VoiceSettingsConfig = Field(default_factory=VoiceSettingsConfig)
     ui: UIConfig = Field(default_factory=UIConfig)
 
 
