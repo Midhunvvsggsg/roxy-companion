@@ -1,3 +1,5 @@
+"""Registry maintaining active built-in, MCP, and plugin tools."""
+
 from __future__ import annotations
 
 import importlib.util
@@ -6,37 +8,79 @@ from pathlib import Path
 from typing import Optional
 
 from kokoro_term.tools.base import BaseTool
-from kokoro_term.tools.builtin.apps import OpenAppTool, OpenUrlTool
+from kokoro_term.tools.builtin.apps import (
+    CheckAppRunningTool,
+    KillProcessTool,
+    OpenAppTool,
+    OpenUrlTool,
+)
 from kokoro_term.tools.builtin.file_ops import (
+    AppendFileTool,
+    FileInfoTool,
+    ListDirTool,
     ReadFileTool,
     SearchFilesTool,
     TrashFileTool,
     WriteFileTool,
 )
-from kokoro_term.tools.builtin.system_info import SystemInfoTool
+from kokoro_term.tools.builtin.media import (
+    BrightnessControlTool,
+    MediaControlTool,
+    NowPlayingTool,
+    VolumeControlTool,
+    YouTubePlayTool,
+)
+from kokoro_term.tools.builtin.packages import PackageManagerTool
+from kokoro_term.tools.builtin.screen import CaptureScreenTool, InspectScreenTool
 from kokoro_term.tools.builtin.shell import ShellCommandTool
+from kokoro_term.tools.builtin.system_info import SystemInfoTool
+from kokoro_term.tools.env_detect import detect_environment, format_env_for_prompt
+from kokoro_term.tools.mcp_client import load_mcp_servers
 
 
 class ToolRegistry:
-    """Registry maintaining active built-in and plugin tools."""
+    """Registry maintaining active built-in, MCP, and plugin tools."""
 
     def __init__(self, plugins_dir: Optional[str | Path] = None):
         self._tools: dict[str, BaseTool] = {}
         self._register_builtins()
+
+        # Load MCP tools if configured
+        for mcp_tool in load_mcp_servers():
+            self.register(mcp_tool)
 
         if plugins_dir:
             self.load_plugins(plugins_dir)
 
     def _register_builtins(self) -> None:
         builtins: list[BaseTool] = [
+            # System & App Tools
             SystemInfoTool(),
+            OpenAppTool(),
+            OpenUrlTool(),
+            KillProcessTool(),
+            CheckAppRunningTool(),
+            # Shell Tool
+            ShellCommandTool(),
+            # Media & YouTube Tools
+            MediaControlTool(),
+            VolumeControlTool(),
+            BrightnessControlTool(),
+            NowPlayingTool(),
+            YouTubePlayTool(),
+            # File Operations
             ReadFileTool(),
             WriteFileTool(),
+            AppendFileTool(),
+            ListDirTool(),
             SearchFilesTool(),
+            FileInfoTool(),
             TrashFileTool(),
-            ShellCommandTool(),
-            OpenUrlTool(),
-            OpenAppTool(),
+            # Packages
+            PackageManagerTool(),
+            # Screen Awareness & Vision
+            CaptureScreenTool(),
+            InspectScreenTool(),
         ]
         for tool in builtins:
             self.register(tool)
@@ -75,16 +119,25 @@ class ToolRegistry:
         return count
 
     def generate_system_prompt_documentation(self) -> str:
-        """Format tools description and invocation syntax for LLM context."""
+        """Format tools description, invocation syntax, and operating guidelines for LLM."""
+        env_summary = format_env_for_prompt()
         docs = [
-            "### Available System Tools & Capabilities:",
-            "You have direct permission-governed access to the user's computer through tools.",
-            "To invoke a tool, output a tool call block in your response using this exact syntax:",
+            "### SYSTEM ENVIRONMENT & CAPABILITIES:",
+            env_summary,
+            "",
+            "### MANDATORY AGENT INSTRUCTIONS:",
+            "- You have FULL PERMISSION and DIRECT EXECUTION CAPABILITY to control Midhun's computer using the tools listed below.",
+            "- When Midhun asks you to open an application (e.g., Brave, terminal, Discord, code), play a video or music on YouTube, adjust volume or brightness, run a shell command, check or install packages, take screenshots, or read/write files, you MUST invoke the matching tool.",
+            "- NEVER say 'As an AI I cannot open applications' or 'I don't have access to your computer'. YOU DO HAVE ACCESS. Claiming you cannot control the computer when a tool exists is strictly forbidden.",
+            "- When asked to perform an action, plan briefly in your mind, invoke the tool call block, observe the result, verify success, and then reply warmly in character.",
+            "",
+            "### TOOL CALL INVOCATION SYNTAX:",
+            "To execute a tool, output a tool call block in your response using this EXACT format:",
             "<tool_call>",
             '{"name": "tool_name", "arguments": {"param1": "val1"}}',
             "</tool_call>",
             "",
-            "Tools:",
+            "### ACTIVE SYSTEM TOOLS:",
         ]
 
         for t in self.list_tools():
@@ -95,5 +148,5 @@ class ToolRegistry:
                 docs.append(f"  Params: ({params_str})")
 
         docs.append("")
-        docs.append("You may call multiple tools or combine tools with spoken dialogue.")
+        docs.append("You may combine tools with spoken dialogue or commentary in character.")
         return "\n".join(docs) + "\n"
