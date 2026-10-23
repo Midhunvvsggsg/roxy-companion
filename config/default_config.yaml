@@ -17,8 +17,15 @@ memory:
   db_path: "data/memory.db"
   short_term_window: 15
   auto_consolidate_interval: 10
-  user_id: "default_user"
+  user_id: "Midhun"
 
 ui:
   theme: "dark"
   show_avatar_panel: true
+  mode: "companion"
+
+avatar:
+  backend: "terminal"
+  enable_animation: true
+  fps: 24
+  eyebrows: "off"
