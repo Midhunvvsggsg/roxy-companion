@@ -42,10 +42,22 @@ class FasterWhisperProvider(STTProvider):
         loop = asyncio.get_running_loop()
 
         def _run_transcribe():
+            import numpy as np
             model = self._get_model()
-            audio_io = io.BytesIO(audio_data)
+            if isinstance(audio_data, (bytes, bytearray)):
+                if audio_data[:4] == b"RIFF":
+                    import wave
+                    with wave.open(io.BytesIO(audio_data), "rb") as wf:
+                        n = wf.getnframes()
+                        raw = wf.readframes(n)
+                        audio_arr = np.frombuffer(raw, dtype=np.int16).astype(np.float32) / 32768.0
+                else:
+                    audio_arr = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
+            else:
+                audio_arr = audio_data
+
             # Transcribe with auto language detection (supporting English and Malayalam)
-            segments, info = model.transcribe(audio_io, beam_size=2)
+            segments, info = model.transcribe(audio_arr, beam_size=2)
             text = " ".join([seg.text.strip() for seg in segments])
             return text, info.language, info.language_probability
 

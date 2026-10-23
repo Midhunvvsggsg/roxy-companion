@@ -8,3 +8,19 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Local SQLite databases
+data/*.db
+data/*.db-shm
+data/*.db-wal
+data/audit.log
+data/*.wav
+
+# Character-specific avatar art (do not bundle in public repository)
+characters/roxy/avatar/
+assets_in/roxy/

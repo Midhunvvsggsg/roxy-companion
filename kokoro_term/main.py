@@ -68,16 +68,96 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Path to custom config.yaml",
     )
+    parser.add_argument(
+        "--avatar-backend",
+        type=str,
+        default=None,
+        choices=["auto", "window", "terminal"],
+        help="Avatar display backend: auto, window (PySide6 desktop), or terminal",
+    )
+    parser.add_argument(
+        "--protocol",
+        type=str,
+        default=None,
+        choices=["auto", "sixel", "kitty", "half_block", "ascii"],
+        help="Terminal graphics rendering protocol override: sixel, kitty, half_block, ascii",
+    )
+    parser.add_argument(
+        "--video",
+        action="store_true",
+        help="Play high-resolution 60 FPS avatar video directly inside the terminal via Sixel graphics",
+    )
+    parser.add_argument(
+        "--web",
+        action="store_true",
+        help="Launch full 60 FPS WebGL 2.5D pseudo-3D companion window",
+    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
 
+    # Terminal Video Playback (Sixel / Foot)
+    if args.video:
+        import subprocess
+        import shutil
+        char = args.character or "roxy"
+        base_dir = Path(__file__).resolve().parent.parent / "characters" / char / "avatar"
+        video_path = base_dir / f"{char}_terminal.mp4"
+        if not video_path.exists():
+            video_path = base_dir / f"{char}_terminal.webm"
+        if not video_path.exists():
+            video_path = Path("/home/midhun/kokoro-term/characters/roxy/avatar/roxy_terminal.mp4")
+
+        vo = args.protocol if args.protocol in ["sixel", "kitty"] else "sixel"
+        if shutil.which("mpv"):
+            print(f"[Kokoro-Term] Playing high-resolution avatar video inside terminal ({vo})... (Press 'q' to stop)")
+            subprocess.run(["mpv", f"--vo={vo}", "--loop=inf", str(video_path)])
+            return 0
+        else:
+            print("[Error] 'mpv' is required to render video inside terminal via Sixel graphics.", file=sys.stderr)
+            return 1
+
+    # WebGL 60 FPS Companion shortcut
+    if args.web:
+        import subprocess
+        import shutil
+        import webbrowser
+        import socket
+        import time
+
+        # Ensure Python backend service is running on port 5174
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        is_running = s.connect_ex(('127.0.0.1', 5174)) == 0
+        s.close()
+        if not is_running:
+            service_path = Path("/home/midhun/Development/mesh-avatar-studio/tools/roxy_service.py")
+            if service_path.exists():
+                subprocess.Popen([sys.executable, str(service_path)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                time.sleep(0.8)
+
+        url = "http://127.0.0.1:5174/companion.html?project=roxy"
+        if shutil.which("brave"):
+            subprocess.Popen(["brave", f"--app={url}"])
+            print("[Kokoro-Term] Launched 60 FPS WebGL Companion in Brave App Mode!")
+            return 0
+        elif shutil.which("chromium"):
+            subprocess.Popen(["chromium", f"--app={url}"])
+            print("[Kokoro-Term] Launched 60 FPS WebGL Companion in Chromium App Mode!")
+            return 0
+        else:
+            webbrowser.open(url)
+            print("[Kokoro-Term] Opened 60 FPS WebGL Companion in browser!")
+            return 0
+
     # Load configuration
     config = load_config(args.config)
 
     # CLI Overrides
+    if args.protocol and args.protocol != "auto":
+        import os
+        os.environ["KOKORO_RENDER_PROTOCOL"] = args.protocol
     if args.character:
         config.active_character = args.character
     if args.mock:
@@ -92,6 +172,8 @@ def main() -> int:
         config.tools.sandbox_dir = args.sandbox
     if args.no_tools:
         config.tools.enabled = False
+    if args.avatar_backend:
+        config.avatar.backend = args.avatar_backend
 
     # Locate character directory
     char_dir = Path("characters")

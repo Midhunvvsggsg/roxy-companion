@@ -28,7 +28,7 @@ def get_process_memory_mb() -> float:
         return 0.0
 
 
-def format_performance_report(config, character, memory_db_path: str = "data/memory.db") -> str:
+def format_performance_report(config, character, memory_db_path: str = "data/memory.db", avatar_info: str = "Terminal (24 FPS)") -> str:
     """Generate a clean telemetry breakdown for /perf command."""
     mem_mb = get_process_memory_mb()
 
@@ -43,5 +43,6 @@ def format_performance_report(config, character, memory_db_path: str = "data/mem
         f"  • [bold cyan]Memory Database Size:[/bold cyan] {db_size_kb:.1f} KB\n"
         f"  • [bold cyan]Active Character:[/bold cyan] {character.name}\n"
         f"  • [bold cyan]LLM Provider:[/bold cyan] {config.llm.provider} ({config.llm.model})\n"
+        f"  • [bold cyan]Avatar Backend:[/bold cyan] {avatar_info}\n"
         f"  • [bold cyan]Idle CPU Footprint:[/bold cyan] Near 0.0% (Event-driven async)"
     )

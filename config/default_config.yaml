@@ -6,7 +6,7 @@ character_dir: "characters"
 llm:
   # Providers: "gemini", "openai", "ollama", "mock"
   provider: "gemini"
-  model: "gemini-2.5-flash"
+  model: "gemini-flash-lite-latest"
   api_key_env: "GEMINI_API_KEY"
   base_url: ""
   temperature: 0.7
