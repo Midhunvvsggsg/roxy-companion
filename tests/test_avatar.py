@@ -45,3 +45,18 @@ def test_sprite_pack_generation_and_composition(tmp_path):
     # Speaking frame
     speaking_frame = pack.get_composite_frame(emotion="neutral", is_speaking=True, time_sec=0.1)
     assert speaking_frame is not None
+
+
+def test_avatar_panel_rendering():
+    from rich.text import Text
+    from kokoro_term.character import load_character
+    from kokoro_term.ui.app import AvatarPanel
+
+    character = load_character("roxy", character_dir="characters")
+    panel = AvatarPanel(character=character)
+    assert panel.avatar_mode == "half_block"
+
+    rendered = panel.render()
+    assert isinstance(rendered, Text)
+    assert len(rendered.plain) > 100
+    assert "Roxy Migurdia" in rendered.plain

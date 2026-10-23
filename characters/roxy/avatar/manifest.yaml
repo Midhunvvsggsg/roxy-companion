@@ -1,50 +1,246 @@
-version: '1.0'
-size:
-- 24
-- 24
-layers:
-  base: base.png
-  blush: blush.png
-eye_states:
-  open: eyes_open.png
-  blink: eyes_blink.png
-  half: eyes_half.png
-mouth_states:
-  neutral: mouth_neutral.png
-  smile: mouth_smile.png
-  open: mouth_open.png
-  pout: mouth_pout.png
-emotions:
-  neutral:
-    eyes: open
-    mouth: neutral
-    blush: false
-  happy:
-    eyes: blink
-    mouth: smile
-    blush: true
-  blush:
-    eyes: half
-    mouth: pout
-    blush: true
-  pout:
-    eyes: open
-    mouth: pout
-    blush: true
-  sad:
-    eyes: half
-    mouth: neutral
-    blush: false
-  surprised:
-    eyes: open
-    mouth: open
-    blush: true
-  thinking:
-    eyes: half
-    mouth: neutral
-    blush: false
 animation:
-  blink_interval_seconds: 3.5
-  blink_duration_seconds: 0.2
-  breathe_cycle_seconds: 3.0
-  breathe_offset_y: 1
+  blink_duration: 0.12
+  blink_interval_max: 6.0
+  blink_interval_min: 3.0
+  breathing_amplitude_px: 8.0
+  breathing_frequency: 0.25
+  head_sway_amplitude_px: 4.0
+brow_states:
+  angry:
+    file: layers/brows_angry.png
+    group: brows
+    offset:
+    - 0
+    - 0
+    size:
+    - 1024
+    - 1024
+    z_index: 21
+  neutral:
+    file: layers/brows_neutral.png
+    group: brows
+    offset:
+    - 0
+    - 0
+    size:
+    - 1024
+    - 1024
+    z_index: 21
+  sad:
+    file: layers/brows_sad.png
+    group: brows
+    offset:
+    - 0
+    - 0
+    size:
+    - 1024
+    - 1024
+    z_index: 21
+  surprised:
+    file: layers/brows_surprised.png
+    group: brows
+    offset:
+    - 0
+    - 0
+    size:
+    - 1024
+    - 1024
+    z_index: 21
+canvas_size:
+- 1024
+- 1024
+framing:
+- 160
+- 30
+- 864
+- 734
+character: roxy
+emotions:
+  angry:
+    blush: false
+    brows: angry
+    eyes: open
+    mouth: u
+    overlays: []
+  blush:
+    blush: true
+    brows: neutral
+    eyes: open
+    mouth: i
+    overlays: []
+  embarrassed:
+    blush: true
+    brows: sad
+    eyes: half
+    mouth: u
+    overlays: []
+  happy:
+    blush: true
+    brows: neutral
+    eyes: open
+    mouth: a
+    overlays: []
+  neutral:
+    blush: false
+    brows: neutral
+    eyes: open
+    mouth: closed
+    overlays: []
+  pout:
+    blush: true
+    brows: angry
+    eyes: open
+    mouth: u
+    overlays: []
+  sad:
+    blush: false
+    brows: sad
+    eyes: half
+    mouth: closed
+    overlays: []
+  surprised:
+    blush: true
+    brows: surprised
+    eyes: open
+    mouth: o
+    overlays: []
+  thinking:
+    blush: false
+    brows: neutral
+    eyes: half
+    mouth: closed
+    overlays:
+    - sweat
+eye_states:
+  closed:
+    file: layers/eyes_closed.png
+    group: eyes
+    offset:
+    - 0
+    - 0
+    size:
+    - 1024
+    - 1024
+    z_index: 20
+  half:
+    file: layers/eyes_half.png
+    group: eyes
+    offset:
+    - 0
+    - 0
+    size:
+    - 1024
+    - 1024
+    z_index: 20
+  open:
+    file: layers/eyes_open.png
+    group: eyes
+    offset:
+    - 0
+    - 0
+    size:
+    - 1024
+    - 1024
+    z_index: 20
+layers:
+  base:
+    file: layers/base.png
+    group: base
+    offset:
+    - 0
+    - 0
+    size:
+    - 1024
+    - 1024
+    z_index: 10
+  blush:
+    file: layers/blush.png
+    group: overlay
+    offset:
+    - 0
+    - 0
+    size:
+    - 1024
+    - 1024
+    z_index: 15
+  hair_front:
+    file: layers/hair_front.png
+    group: overlay
+    offset:
+    - 0
+    - 0
+    size:
+    - 1024
+    - 1024
+    z_index: 40
+  sweat:
+    file: layers/sweat.png
+    group: overlay
+    offset:
+    - 0
+    - 0
+    size:
+    - 1024
+    - 1024
+    z_index: 15
+mouth_states:
+  a:
+    file: layers/mouth_a.png
+    group: mouth
+    offset:
+    - 0
+    - 0
+    size:
+    - 1024
+    - 1024
+    z_index: 22
+  closed:
+    file: layers/mouth_closed.png
+    group: mouth
+    offset:
+    - 0
+    - 0
+    size:
+    - 1024
+    - 1024
+    z_index: 22
+  e:
+    file: layers/mouth_e.png
+    group: mouth
+    offset:
+    - 0
+    - 0
+    size:
+    - 1024
+    - 1024
+    z_index: 22
+  i:
+    file: layers/mouth_i.png
+    group: mouth
+    offset:
+    - 0
+    - 0
+    size:
+    - 1024
+    - 1024
+    z_index: 22
+  o:
+    file: layers/mouth_o.png
+    group: mouth
+    offset:
+    - 0
+    - 0
+    size:
+    - 1024
+    - 1024
+    z_index: 22
+  u:
+    file: layers/mouth_u.png
+    group: mouth
+    offset:
+    - 0
+    - 0
+    size:
+    - 1024
+    - 1024
+    z_index: 22

@@ -26,6 +26,7 @@ class LLMConfig(BaseModel):
 class UIConfig(BaseModel):
     theme: str = "dark"
     show_avatar_panel: bool = True
+    mode: str = "companion"  # "companion" (full terminal avatar + starry sky + voice) or "chat" (split GUI)
 
 
 class MemoryConfig(BaseModel):
@@ -44,12 +45,19 @@ class ToolsConfig(BaseModel):
     max_agent_steps: int = 5
 
 
+class AvatarConfig(BaseModel):
+    backend: str = "auto"  # "window", "terminal", "auto"
+    enable_animation: bool = True
+    fps: int = 24
+
+
 class AppConfig(BaseModel):
     active_character: str = "roxy"
     character_dir: str = "characters"
     llm: LLMConfig = Field(default_factory=LLMConfig)
     memory: MemoryConfig = Field(default_factory=MemoryConfig)
     tools: ToolsConfig = Field(default_factory=ToolsConfig)
+    avatar: AvatarConfig = Field(default_factory=AvatarConfig)
     ui: UIConfig = Field(default_factory=UIConfig)
 
 

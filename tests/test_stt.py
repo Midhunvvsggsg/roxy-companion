@@ -39,3 +39,22 @@ def test_whisper_provider_lazy_loading():
     # Shouldn't raise any exceptions even if weights aren't loaded yet
     available = provider.is_available()
     assert isinstance(available, bool)
+
+
+@pytest.mark.asyncio
+async def test_whisper_silence_dropped():
+    import numpy as np
+    provider = FasterWhisperProvider()
+    # 1 second of dead silence
+    silence = np.zeros(16000, dtype=np.int16).tobytes()
+    res = await provider.transcribe(silence)
+    assert res.text == ""
+    assert res.confidence == 0.0
+    assert not res.is_unclear
+
+
+def test_hallucination_patterns():
+    from kokoro_term.stt.whisper_provider import HALLUCINATION_PATTERNS
+    assert "thank you for watching" in HALLUCINATION_PATTERNS
+    assert "subtitles by" in HALLUCINATION_PATTERNS
+    assert "[music]" in HALLUCINATION_PATTERNS
