@@ -49,14 +49,27 @@ class AvatarConfig(BaseModel):
     backend: str = "auto"  # "window", "terminal", "auto"
     enable_animation: bool = True
     fps: int = 24
+    lipsync_offset_ms: int = 0
 
 
 class VoiceSettingsConfig(BaseModel):
-    preset: str = "mature_mommy"
+    provider: str = Field(default="local", description="TTS provider: 'local' (offline/private default) or 'edge' (cloud)")
+    preset: str = "mature_mommy_fast"
     voice: str = "en-US-AvaNeural"
+    speed: float = Field(default=1.20, ge=0.9, le=1.5)
     base_pitch: int = -4
-    base_rate: int = 0
+    base_rate: int = 20
+    pause_comma_ms: int = 120
+    pause_sentence_ms: int = 250
+    trim_silence: bool = True
     custom_model_path: str = ""
+    fallback_enabled: bool = True
+
+
+class MusicConfig(BaseModel):
+    duck: str = "on"  # "on" | "off"
+    duck_volume: int = Field(default=30, ge=0, le=100)
+    default_volume: int = Field(default=100, ge=0, le=100)
 
 
 class AppConfig(BaseModel):
@@ -67,6 +80,7 @@ class AppConfig(BaseModel):
     tools: ToolsConfig = Field(default_factory=ToolsConfig)
     avatar: AvatarConfig = Field(default_factory=AvatarConfig)
     voice: VoiceSettingsConfig = Field(default_factory=VoiceSettingsConfig)
+    music: MusicConfig = Field(default_factory=MusicConfig)
     ui: UIConfig = Field(default_factory=UIConfig)
 
 

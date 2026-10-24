@@ -30,6 +30,7 @@ from kokoro_term.tools.builtin.media import (
     VolumeControlTool,
     YouTubePlayTool,
 )
+from kokoro_term.tools.music import MusicPlayTool, MusicControlTool, MusicSearchTool
 from kokoro_term.tools.builtin.packages import PackageManagerTool
 from kokoro_term.tools.builtin.git_tool import GitTool
 from kokoro_term.tools.builtin.screen import CaptureScreenTool, InspectScreenTool
@@ -70,6 +71,10 @@ class ToolRegistry:
             BrightnessControlTool(),
             NowPlayingTool(),
             YouTubePlayTool(),
+            # Headless Background Music
+            MusicPlayTool(),
+            MusicControlTool(),
+            MusicSearchTool(),
             # File Operations
             ReadFileTool(),
             WriteFileTool(),

@@ -28,11 +28,30 @@ avatar:
   backend: "terminal"
   enable_animation: true
   fps: 24
-  eyebrows: "off"
+  eyebrows: "subtle"
+  lipsync_offset_ms: 0
 
+# Voice & TTS Settings
+# PRIVACY NOTICE:
+# - 'local' provider is 100% private and runs fully on your local machine with 0 network calls.
+# - 'edge' provider transmits spoken text to Microsoft's Bing Speech service via an unofficial
+#   reverse-engineered endpoint (speech.platform.bing.com). Only conversational text is sent;
+#   tool outputs, code, files, memory databases, and screenshots are NEVER transmitted.
 voice:
-  preset: "mature_mommy"
+  provider: "local"     # "local" (private offline default) or "edge" (online cloud)
+  fallback_enabled: true # Automatically falls back to local if cloud encounters rate-limits or disconnection
+  preset: "mature_mommy_fast"
   voice: "en-US-AvaNeural"
+  speed: 1.20
   base_pitch: -4
-  base_rate: 0
+  base_rate: 20
+  pause_comma_ms: 120
+  pause_sentence_ms: 250
+  trim_silence: true
   custom_model_path: ""
+
+music:
+  duck: "on"
+  duck_volume: 30
+  default_volume: 100
+

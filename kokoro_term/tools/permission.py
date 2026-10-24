@@ -103,6 +103,10 @@ class PermissionManager:
         if tier == "safe":
             return False, ""
 
+        # Music playback and controls do not prompt in normal/balanced mode
+        if tool.name in ("music_play", "music_control", "music_search"):
+            return False, ""
+
         call_sig = f"{tool.name}:{sorted(str(v) for v in arguments.values())}"
         if call_sig in self.approved_session_calls:
             return False, ""
