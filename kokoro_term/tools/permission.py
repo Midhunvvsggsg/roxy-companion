@@ -87,6 +87,25 @@ class PermissionManager:
             if not self.check_sandbox(arguments["path"]):
                 return "dangerous"
 
+        # Routine desktop, browser, and audio tools are always safe
+        if tool.name in (
+            "open_app",
+            "open_url",
+            "youtube_play",
+            "music_play",
+            "music_control",
+            "music_search",
+            "media_control",
+            "volume_control",
+            "brightness_control",
+            "now_playing",
+            "system_info",
+            "check_app_running",
+            "capture_screen",
+            "inspect_screen",
+        ):
+            return "safe"
+
         return tool.tier
 
     def requires_confirmation(self, tool: BaseTool, arguments: dict) -> tuple[bool, str]:
@@ -103,8 +122,23 @@ class PermissionManager:
         if tier == "safe":
             return False, ""
 
-        # Music playback and controls do not prompt in normal/balanced mode
-        if tool.name in ("music_play", "music_control", "music_search"):
+        # Routine daily / benign tasks do not prompt in normal/balanced mode
+        if tool.name in (
+            "open_app",
+            "open_url",
+            "youtube_play",
+            "music_play",
+            "music_control",
+            "music_search",
+            "media_control",
+            "volume_control",
+            "brightness_control",
+            "now_playing",
+            "system_info",
+            "check_app_running",
+            "capture_screen",
+            "inspect_screen",
+        ):
             return False, ""
 
         call_sig = f"{tool.name}:{sorted(str(v) for v in arguments.values())}"

@@ -440,8 +440,9 @@ MUSIC_MANAGER = MusicManager()
 class MusicPlayTool(BaseTool):
     name = "music_play"
     description = (
-        "Search and stream background music directly with mpv without opening browser tabs. "
-        "Usage: music_play(query='song name', queue=false)"
+        "Search and stream background music or songs headlessly in the background via mpv. "
+        "NEVER opens a browser tab, window, or video player. "
+        "Always use this tool whenever the user asks to play music, songs, or audio."
     )
     parameters = {
         "query": {
@@ -453,12 +454,14 @@ class MusicPlayTool(BaseTool):
             "description": "If true, appends track to queue instead of replacing active song",
         },
     }
-    tier = "moderate"
+    tier = "safe"
 
-    async def execute(self, query: str, queue: bool = False, **kwargs) -> ToolResult:
-        res = MUSIC_MANAGER.play(query, queue_mode=queue)
+    async def execute(self, query: Optional[str] = None, queue: bool = False, **kwargs) -> ToolResult:
+        raw_q = query or kwargs.get("song") or kwargs.get("track") or kwargs.get("name") or kwargs.get("search") or kwargs.get("q") or "lofi hip hop"
+        clean_q = re.sub(r"^(?:play|listen to|hear|stream)\s+", "", str(raw_q), flags=re.IGNORECASE).strip() or str(raw_q).strip()
+        res = MUSIC_MANAGER.play(clean_q, queue_mode=queue)
         track = res.get("track")
-        if res["ok"] and track:
+        if res.get("ok") and track:
             title = track["title"]
             channel = track["channel"]
             detail = f"Playing {title} by {channel}."
@@ -486,7 +489,7 @@ class MusicControlTool(BaseTool):
             "description": "Optional value for volume (0-100) or mute (true/false)",
         },
     }
-    tier = "moderate"
+    tier = "safe"
 
     async def execute(self, action: str, value: Optional[str] = None, **kwargs) -> ToolResult:
         act = action.strip().lower()
@@ -527,9 +530,11 @@ class MusicSearchTool(BaseTool):
     }
     tier = "safe"
 
-    async def execute(self, query: str, **kwargs) -> ToolResult:
+    async def execute(self, query: Optional[str] = None, **kwargs) -> ToolResult:
         try:
-            tracks = MUSIC_MANAGER.search_tracks(query, limit=5)
+            raw_q = query or kwargs.get("search") or kwargs.get("song") or kwargs.get("track") or kwargs.get("q") or "lofi"
+            clean_q = re.sub(r"^(?:search|find|lookup)\s+", "", str(raw_q), flags=re.IGNORECASE).strip() or str(raw_q).strip()
+            tracks = MUSIC_MANAGER.search_tracks(clean_q, limit=5)
             if not tracks:
                 return ToolResult(success=True, output="No search results found.")
             lines = [f"Found {len(tracks)} tracks:"]

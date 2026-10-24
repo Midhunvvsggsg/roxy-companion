@@ -22,13 +22,17 @@ ACTION_WORDS = {
     "open", "play", "search", "install", "set", "stop", "turn", "show", "find",
     "launch", "run", "start", "kill", "close", "mute", "unmute", "volume",
     "brightness", "git", "read", "write", "delete", "remove", "check", "screen",
-    "look", "see", "watch", "exec", "help", "pause", "resume", "louder", "quieter"
+    "look", "see", "watch", "exec", "help", "pause", "resume", "louder", "quieter",
+    "music", "song", "songs", "track", "tracks", "playing", "skip", "next", "prev",
+    "previous", "listen", "hear", "stream", "tune", "tunes", "browse", "visit",
+    "news", "headlines", "weather", "sing", "put", "bring", "fire"
 }
 
 APP_SITE_NAMES = {
-    "yt", "youtube", "browser", "brave", "firefox", "chrome", "chromium",
-    "terminal", "foot", "code", "vscode", "discord", "spotify", "mpv", "vlc",
-    "git", "web", "google"
+    "yt", "youtube", "yoututbe", "youtub", "yotube", "youtoube", "ytube",
+    "browser", "brave", "firefox", "chrome", "chromium",
+    "terminal", "foot", "kitty", "code", "vscode", "discord", "spotify", "mpv", "vlc",
+    "git", "github", "gitlab", "web", "google", "googl", "news", "reddit", "twitter", "x"
 }
 
 
@@ -72,27 +76,91 @@ class AgentLoop:
         self.active_tasks: dict[str, asyncio.Event] = {}
 
     def parse_tool_calls(self, text: str) -> list[tuple[str, dict]]:
-        calls = []
-        matches = re.finditer(r"<tool_call>(.*?)</tool_call>", text, re.DOTALL)
-        for m in matches:
-            block = m.group(1).strip()
-            # Strip markdown code fences if model enclosed JSON
-            block = re.sub(r"^```(?:json)?\s*", "", block, flags=re.IGNORECASE)
-            block = re.sub(r"\s*```$", "", block)
+        calls: list[tuple[str, dict]] = []
+        registered_tool_names = set(self.registry._tools.keys()) if hasattr(self.registry, "_tools") else set()
 
-            # 1. Direct JSON parse
+        def _clean_block(raw: str) -> str:
+            b = raw.strip()
+            b = re.sub(r"^```(?:json)?\s*", "", b, flags=re.IGNORECASE)
+            b = re.sub(r"\s*```$", "", b)
+            return b.strip()
+
+        def _extract_from_data(data: Any, default_name: Optional[str] = None) -> list[tuple[str, dict]]:
+            results: list[tuple[str, dict]] = []
+            if isinstance(data, list):
+                for item in data:
+                    results.extend(_extract_from_data(item, default_name))
+                return results
+
+            if not isinstance(data, dict):
+                return results
+
+            # Check OpenAI tool_calls wrapper
+            if "tool_calls" in data and isinstance(data["tool_calls"], list):
+                for tc in data["tool_calls"]:
+                    results.extend(_extract_from_data(tc, default_name))
+                return results
+
+            # Check function wrapper
+            name = None
+            args = None
+            if "function" in data and isinstance(data["function"], dict):
+                fn = data["function"]
+                name = fn.get("name")
+                args = fn.get("arguments")
+            else:
+                name = data.get("name") or data.get("tool") or data.get("action") or data.get("function") or default_name
+
+            if not name or not isinstance(name, str):
+                return results
+
+            name = name.strip()
+
+            if args is None:
+                if "arguments" in data:
+                    args = data["arguments"]
+                elif "args" in data:
+                    args = data["args"]
+                elif "parameters" in data:
+                    args = data["parameters"]
+                elif "params" in data:
+                    args = data["params"]
+                else:
+                    args = {k: v for k, v in data.items() if k not in ("name", "tool", "action", "function", "type")}
+
+            if isinstance(args, str):
+                try:
+                    args = json.loads(args)
+                except Exception:
+                    args = {"query": args} if name in ("music_play", "music_search", "youtube_play") else {"target": args}
+
+            if not isinstance(args, dict):
+                args = {}
+
+            results.append((name, args))
+            return results
+
+        # 1. Match <tool_call ...>...</tool_call> and unclosed <tool_call ...>...
+        matches = list(re.finditer(r"<tool_call(?:\s+name=[\"'](?P<tag_name>[^\"']+)[\"'])?>(.*?)(?:</tool_call>|$)", text, re.DOTALL | re.IGNORECASE))
+        for m in matches:
+            tag_name = m.group("tag_name")
+            block = _clean_block(m.group(2))
+            if not block and not tag_name:
+                continue
+
+            # Try direct JSON parse
             try:
                 data = json.loads(block)
-                name = data.get("name")
-                args = data.get("arguments", {})
-                if name:
-                    calls.append((name, args))
+                res = _extract_from_data(data, default_name=tag_name)
+                if res:
+                    calls.extend(res)
                     continue
             except Exception:
                 pass
 
-            # 2. Balanced brace extraction fallback
+            # Fallback: Find balanced braces in block
             start_idx = block.find("{")
+            parsed_any = False
             if start_idx != -1:
                 depth = 0
                 for i in range(start_idx, len(block)):
@@ -104,13 +172,82 @@ class AgentLoop:
                             try:
                                 candidate = block[start_idx : i + 1]
                                 data = json.loads(candidate)
-                                name = data.get("name")
-                                args = data.get("arguments", {})
-                                if name:
-                                    calls.append((name, args))
+                                res = _extract_from_data(data, default_name=tag_name)
+                                if res:
+                                    calls.extend(res)
+                                    parsed_any = True
+                                    break
                             except Exception:
                                 pass
-                            break
+            if parsed_any:
+                continue
+
+            # Fallback: Python-style function call e.g. open_app(app_name="youtube") or music_play("starboy")
+            fn_m = re.match(r"^([a-zA-Z0-9_-]+)\s*\((.*?)\)$", block, re.DOTALL)
+            if fn_m:
+                fn_name = fn_m.group(1).strip()
+                args_str = fn_m.group(2).strip()
+                parsed_args: dict[str, Any] = {}
+                for kw_m in re.finditer(r'([a-zA-Z0-9_]+)\s*=\s*(?:["\'](.*?)["\']|([^,\s]+))', args_str):
+                    k = kw_m.group(1)
+                    v = kw_m.group(2) if kw_m.group(2) is not None else kw_m.group(3)
+                    parsed_args[k] = v
+                if not parsed_args and args_str:
+                    clean_pos = args_str.strip("\"'")
+                    if fn_name in ("music_play", "music_search", "youtube_play"):
+                        parsed_args["query"] = clean_pos
+                    elif fn_name in ("open_app", "check_app_running"):
+                        parsed_args["app_name"] = clean_pos
+                    elif fn_name in ("open_url",):
+                        parsed_args["url"] = clean_pos
+                calls.append((fn_name, parsed_args))
+
+        # 2. Fallback if no <tool_call> tags matched: check markdown code blocks containing json
+        if not calls:
+            code_blocks = re.findall(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL | re.IGNORECASE)
+            for cb in code_blocks:
+                try:
+                    data = json.loads(cb.strip())
+                    res = _extract_from_data(data)
+                    for p in res:
+                        if self.registry.get(p[0]):
+                            calls.append(p)
+                except Exception:
+                    pass
+
+        # 3. Fallback: raw JSON objects embedded in text without tags or fences
+        if not calls:
+            for json_match in re.finditer(r"(\{(?:[^{}]|(?:\{[^{}]*\}))*\})", text, re.DOTALL):
+                try:
+                    data = json.loads(json_match.group(1))
+                    res = _extract_from_data(data)
+                    for p in res:
+                        if self.registry.get(p[0]):
+                            calls.append(p)
+                except Exception:
+                    pass
+
+        # 4. Fallback: standalone Python-style function call embedded in text for known registered tools
+        if not calls and registered_tool_names:
+            pattern = r"\b(" + "|".join(re.escape(n) for n in registered_tool_names) + r")\s*\((.*?)\)"
+            for fn_m in re.finditer(pattern, text, re.DOTALL):
+                fn_name = fn_m.group(1).strip()
+                args_str = fn_m.group(2).strip()
+                parsed_args = {}
+                for kw_m in re.finditer(r'([a-zA-Z0-9_]+)\s*=\s*(?:["\'](.*?)["\']|([^,\s]+))', args_str):
+                    k = kw_m.group(1)
+                    v = kw_m.group(2) if kw_m.group(2) is not None else kw_m.group(3)
+                    parsed_args[k] = v
+                if not parsed_args and args_str:
+                    clean_pos = args_str.strip("\"'")
+                    if fn_name in ("music_play", "music_search", "youtube_play"):
+                        parsed_args["query"] = clean_pos
+                    elif fn_name in ("open_app", "check_app_running"):
+                        parsed_args["app_name"] = clean_pos
+                    elif fn_name in ("open_url",):
+                        parsed_args["url"] = clean_pos
+                calls.append((fn_name, parsed_args))
+
         return calls
 
     async def execute_tool(
@@ -239,18 +376,28 @@ class AgentLoop:
                             if "<" in stream_buffer:
                                 last_lt = stream_buffer.rfind("<")
                                 candidate = stream_buffer[last_lt:]
-                                if "<tool_call>".startswith(candidate):
+                                if "<tool_call>".startswith(candidate) or candidate.startswith("<tool_call"):
                                     prefix = stream_buffer[:last_lt]
                                     if prefix:
                                         yield {"type": "token", "token": prefix}
                                     stream_buffer = candidate
                                     break
+                            if "```" in stream_buffer:
+                                last_tick = stream_buffer.rfind("```")
+                                candidate_tick = stream_buffer[last_tick:]
+                                if "```json".startswith(candidate_tick) or candidate_tick.startswith("```json"):
+                                    prefix = stream_buffer[:last_tick]
+                                    if prefix:
+                                        yield {"type": "token", "token": prefix}
+                                    stream_buffer = candidate_tick
+                                    break
                             yield {"type": "token", "token": stream_buffer}
                             stream_buffer = ""
 
-            if stream_buffer and not inside_tool_tag and not stream_buffer.startswith("<tool_call"):
-                clean_flush = re.sub(r"<tool_call>.*?</tool_call>", "", stream_buffer, flags=re.DOTALL)
-                clean_flush = re.sub(r"<tool_call.*$", "", clean_flush, flags=re.DOTALL)
+            if stream_buffer and not inside_tool_tag:
+                clean_flush = re.sub(r"<tool_call(?:\s+[^>]*)?>[\s\S]*?(?:<\/tool_call>|$)", "", stream_buffer, flags=re.DOTALL | re.IGNORECASE)
+                clean_flush = re.sub(r"```(?:json)?\s*\{[\s\S]*?\}\s*```", "", clean_flush, flags=re.DOTALL | re.IGNORECASE)
+                clean_flush = re.sub(r"```(?:json)?\s*\{[\s\S]*$", "", clean_flush, flags=re.DOTALL | re.IGNORECASE)
                 if clean_flush:
                     yield {"type": "token", "token": clean_flush}
 
@@ -322,10 +469,11 @@ class AgentLoop:
                 # 4. Observe: Sanitize and wrap untrusted data, append to conversation
                 raw_obs = result.format_for_llm()
                 safe_obs = wrap_untrusted_data(raw_obs, source=tool_name)
+                user_label = rel_state.user_id if (rel_state and getattr(rel_state, "user_id", None)) else "the user"
                 conversation.append(
                     LLMMessage(
                         role="user",
-                        content=f"[System Observation from tool '{tool_name}']:\n{safe_obs}\n\nNow verify this result and reply warmly to Midhun.",
+                        content=f"[System Observation from tool '{tool_name}']:\n{safe_obs}\n\nNow verify this result and reply warmly in character to {user_label}.",
                     )
                 )
 

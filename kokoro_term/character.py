@@ -84,11 +84,14 @@ class Character(BaseModel):
             f"Never alternate, mix, or switch between different names, nicknames, or honorifics (e.g. do NOT switch back and forth between 'Opppah' and 'Midhun-san') unless the user explicitly tells you to change how you address them."
         )
 
+        bio_formatted = self.bio.replace("{user_name}", effective_name).replace("Midhun-san", effective_name)
+        speaking_summary_formatted = self.speaking_style.summary.replace("{user_name}", effective_name).replace("Midhun-san", effective_name)
+
         return (
             f"You are {self.name} ({self.title}).\n\n"
-            f"Background & Persona:\n{self.bio}\n\n"
+            f"Background & Persona:\n{bio_formatted}\n\n"
             f"Personality Traits:\n{traits_bulleted}\n\n"
-            f"Speaking Style & Mannerisms:\n{self.speaking_style.summary}\n\n"
+            f"Speaking Style & Mannerisms:\n{speaking_summary_formatted}\n\n"
             f"Dynamic Devotion Guidelines:\n{yandere_directive}\n\n"
             f"Rules to adhere to:\n{rules_bulleted}\n"
             f"{name_rule}\n"

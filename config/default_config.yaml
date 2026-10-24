@@ -55,3 +55,8 @@ music:
   duck_volume: 30
   default_volume: 100
 
+tools:
+  enabled: true
+  auto_approve_moderate: true
+  dangerous_actions: "ask"
+

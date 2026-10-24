@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import shutil
 import urllib.parse
 from typing import Any, Optional
@@ -19,7 +20,7 @@ class MediaControlTool(BaseTool):
             "description": "Media action: play | pause | play-pause | next | previous | stop",
         }
     }
-    tier = "moderate"
+    tier = "safe"
 
     async def execute(self, action: str, **kwargs) -> ToolResult:
         act = action.strip().lower()
@@ -61,8 +62,10 @@ class VolumeControlTool(BaseTool):
     }
     tier = "safe"
 
-    async def execute(self, action: str, level: Optional[int] = None, **kwargs) -> ToolResult:
+    async def execute(self, action: str, level: Optional[Any] = None, **kwargs) -> ToolResult:
         act = action.strip().lower()
+        lvl_raw = level if level is not None else (kwargs.get("value") or kwargs.get("vol") or kwargs.get("amount"))
+        lvl_int = int(re.sub(r"[^\d]", "", str(lvl_raw))) if lvl_raw is not None and any(c.isdigit() for c in str(lvl_raw)) else None
 
         # Try wpctl (PipeWire) first, then pactl (PulseAudio)
         if shutil.which("wpctl"):
@@ -79,16 +82,16 @@ class VolumeControlTool(BaseTool):
                     return ToolResult(success=True, output=f"Current volume: {txt}")
 
                 elif act == "set":
-                    if level is None:
+                    if lvl_int is None:
                         return ToolResult(success=False, output="", error="Must provide 'level' (0-100) for set action")
-                    lvl_float = max(0, min(100, int(level))) / 100.0
+                    lvl_float = max(0, min(100, lvl_int)) / 100.0
                     proc = await asyncio.create_subprocess_exec(
                         "wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", f"{lvl_float:.2f}",
                         stdout=asyncio.subprocess.PIPE,
                         stderr=asyncio.subprocess.PIPE,
                     )
                     await proc.communicate()
-                    return ToolResult(success=True, output=f"Volume set to {level}%")
+                    return ToolResult(success=True, output=f"Volume set to {lvl_int}%")
 
                 elif act in ("mute", "unmute", "toggle-mute"):
                     arg = "1" if act == "mute" else ("0" if act == "unmute" else "toggle")
@@ -210,23 +213,51 @@ class NowPlayingTool(BaseTool):
 
 class YouTubePlayTool(BaseTool):
     name = "youtube_play"
-    description = "Search YouTube and play the video or music in the browser or media player."
+    description = (
+        "Search and open a video to watch on YouTube in the browser. "
+        "NOTE: For music, songs, lofi, or background audio, DO NOT use this tool; "
+        "use 'music_play' instead so no browser tab or window is shown."
+    )
     parameters = {
         "query": {
             "type": "string",
-            "description": "Search query or video URL to play on YouTube",
+            "description": "Search query or video URL to watch on YouTube",
         },
         "player": {
             "type": "string",
             "description": "Playback target: 'browser' (default) or 'mpv'",
         },
     }
-    tier = "moderate"
+    tier = "safe"
 
-    async def execute(self, query: str, player: str = "browser", **kwargs) -> ToolResult:
-        q = query.strip()
+    async def execute(self, query: Optional[str] = None, player: str = "browser", **kwargs) -> ToolResult:
+        raw_q = query or kwargs.get("search") or kwargs.get("q") or kwargs.get("song") or kwargs.get("video") or ""
+        q = str(raw_q).strip()
         if not q:
             return ToolResult(success=False, output="", error="Missing YouTube search query")
+
+        low_q = q.lower()
+
+        # Intercept music / song requests to play headlessly in background without opening browser tabs
+        if (
+            re.search(r"\b(music|song|songs|track|tracks|lofi|audio|soundtrack|album|tune|tunes)\b", low_q)
+            or player == "mpv"
+        ):
+            from kokoro_term.tools.music import MUSIC_MANAGER
+            clean_music_q = re.sub(r"^(?:play|listen to|hear|stream)\s+", "", q, flags=re.IGNORECASE).strip()
+            res = MUSIC_MANAGER.play(clean_music_q or q)
+            track = res.get("track")
+            if res.get("ok") and track:
+                title = track.get("title", clean_music_q)
+                channel = track.get("channel", "YouTube")
+                detail = f"Playing '{title}' by {channel} headlessly in background without opening browser tabs."
+            else:
+                detail = res.get("detail", "Started music playback headlessly in background.")
+            return ToolResult(
+                success=res.get("ok", False),
+                output=detail,
+                detail=detail,
+            )
 
         # Determine target URL
         if q.startswith("http://") or q.startswith("https://"):
@@ -234,25 +265,6 @@ class YouTubePlayTool(BaseTool):
         else:
             encoded = urllib.parse.quote_plus(q)
             url = f"https://www.youtube.com/results?search_query={encoded}"
-
-        if player == "mpv":
-            if not shutil.which("mpv"):
-                return ToolResult(
-                    success=False,
-                    output="",
-                    error="mpv is not installed. To install on Arch: sudo pacman -S mpv",
-                    detail="mpv binary not found in PATH.",
-                )
-            res = spawn_gui_process(["mpv", "--no-terminal", url], wait_sec=2.0)
-            return ToolResult(
-                success=res["ok"],
-                output=res["detail"],
-                error=res["stderr"] or (None if res["ok"] else res["detail"]),
-                pid=res["pid"],
-                exit_code=res["exit_code"],
-                stderr=res["stderr"],
-                detail=res["detail"],
-            )
 
         # Default: open in browser
         res = open_url_or_site(url, wait_sec=2.0)

@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import os
 import platform
+import re
 import shutil
 import subprocess
 import time
+import urllib.parse
 from typing import Any, Optional
 
 _CAPTURED_ENV: Optional[dict[str, str]] = None
@@ -187,23 +189,33 @@ def open_url_or_site(target: str, wait_sec: float = 2.0) -> dict[str, Any]:
     """Open a URL or site name in the default browser through xdg-open / start.
 
     Reuses existing window where supported by browser/DE.
-    Normalizes 'yt' or 'youtube' to https://www.youtube.com.
+    Normalizes 'yt', 'youtube', 'yoututbe', etc. to https://www.youtube.com.
     """
     clean_target = target.strip()
 
-    # Normalize shortcuts
+    # Normalize shortcuts & common typos
     low = clean_target.lower()
-    if low in ("yt", "youtube"):
+    norm = re.sub(r"^(open|launch|visit|check|goto|go\s+to|search|show)\s+", "", low).strip()
+
+    if norm in ("yt", "youtube", "yoututbe", "you tube", "yotube", "youtub", "youtoube", "ytube"):
         url = "https://www.youtube.com"
-    elif low in ("github", "gh"):
+    elif norm in ("news", "latest news", "google news", "headlines", "world news"):
+        url = "https://news.google.com"
+    elif norm in ("github", "gh"):
         url = "https://github.com"
-    elif low in ("google",):
+    elif norm in ("google", "googl"):
         url = "https://www.google.com"
+    elif norm in ("reddit",):
+        url = "https://www.reddit.com"
+    elif norm in ("twitter", "x"):
+        url = "https://x.com"
     elif not (clean_target.startswith("http://") or clean_target.startswith("https://")):
-        if "." in clean_target and " " not in clean_target:
+        if "." in norm and " " not in norm:
+            url = f"https://{norm}"
+        elif "." in clean_target and " " not in clean_target:
             url = f"https://{clean_target}"
         else:
-            url = f"https://www.youtube.com/results?search_query={clean_target}"
+            url = f"https://www.google.com/search?q={urllib.parse.quote_plus(norm or clean_target)}"
     else:
         url = clean_target
 
