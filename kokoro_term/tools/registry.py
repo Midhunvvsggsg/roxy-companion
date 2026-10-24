@@ -31,6 +31,7 @@ from kokoro_term.tools.builtin.media import (
     YouTubePlayTool,
 )
 from kokoro_term.tools.builtin.packages import PackageManagerTool
+from kokoro_term.tools.builtin.git_tool import GitTool
 from kokoro_term.tools.builtin.screen import CaptureScreenTool, InspectScreenTool
 from kokoro_term.tools.builtin.shell import ShellCommandTool
 from kokoro_term.tools.builtin.system_info import SystemInfoTool
@@ -60,8 +61,9 @@ class ToolRegistry:
             OpenUrlTool(),
             KillProcessTool(),
             CheckAppRunningTool(),
-            # Shell Tool
+            # Shell & Version Control Tools
             ShellCommandTool(),
+            GitTool(),
             # Media & YouTube Tools
             MediaControlTool(),
             VolumeControlTool(),
@@ -93,6 +95,52 @@ class ToolRegistry:
 
     def list_tools(self) -> list[BaseTool]:
         return list(self._tools.values())
+
+    def to_gemini_tools(self) -> list[dict]:
+        """Convert registered tools into Gemini native function_declarations schemas."""
+        declarations = []
+        for tool in self.list_tools():
+            properties = {}
+            required = []
+            for param_name, param_info in (tool.parameters or {}).items():
+                raw_type = param_info.get("type", "string").upper()
+                if raw_type in ("BOOL", "BOOLEAN"):
+                    gtype = "BOOLEAN"
+                elif raw_type in ("INT", "INTEGER"):
+                    gtype = "INTEGER"
+                elif raw_type in ("FLOAT", "NUMBER"):
+                    gtype = "NUMBER"
+                elif raw_type in ("ARRAY", "LIST"):
+                    gtype = "ARRAY"
+                elif raw_type in ("OBJECT", "DICT"):
+                    gtype = "OBJECT"
+                else:
+                    gtype = "STRING"
+
+                param_def: dict[str, Any] = {
+                    "type": gtype,
+                    "description": param_info.get("description", param_name),
+                }
+                if gtype == "ARRAY":
+                    param_def["items"] = {"type": "STRING"}
+                properties[param_name] = param_def
+                if param_info.get("required", False):
+                    required.append(param_name)
+
+            decl: dict[str, Any] = {
+                "name": tool.name,
+                "description": tool.description,
+            }
+            if properties:
+                decl["parameters"] = {
+                    "type": "OBJECT",
+                    "properties": properties,
+                }
+                if required:
+                    decl["parameters"]["required"] = required
+            declarations.append(decl)
+
+        return [{"function_declarations": declarations}]
 
     def load_plugins(self, directory: str | Path) -> int:
         """Dynamically load any Python tool files dropped in the plugins directory."""

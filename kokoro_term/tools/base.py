@@ -14,11 +14,29 @@ class ToolResult(BaseModel):
     diff: Optional[str] = None
     needs_confirmation: bool = False
     confirmation_prompt: Optional[str] = None
+    pid: Optional[int] = None
+    exit_code: Optional[int] = None
+    stderr: str = ""
+    detail: str = ""
+
+    @property
+    def ok(self) -> bool:
+        return self.success
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "ok": self.success,
+            "pid": self.pid,
+            "exit_code": self.exit_code,
+            "stderr": self.stderr or (self.error or ""),
+            "detail": self.detail or self.output or (self.error or ""),
+        }
 
     def format_for_llm(self) -> str:
         if not self.success:
-            return f"[Tool Error]: {self.error or self.output}"
-        return self.output
+            err = self.error or self.detail or self.output
+            return f"[Tool Error]: {err} (Result: {self.to_dict()})"
+        return f"{self.output} (Result: {self.to_dict()})"
 
 
 class BaseTool(ABC):

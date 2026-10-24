@@ -14,13 +14,29 @@ class LLMProvider(ABC):
     """Abstract interface for LLM providers."""
 
     @abstractmethod
-    async def stream_chat(self, messages: list[LLMMessage]) -> AsyncIterator[str]:
+    async def stream_chat(
+        self,
+        messages: list[LLMMessage],
+        tools: Optional[list[dict]] = None,
+    ) -> AsyncIterator[str]:
         """Yield response tokens or chunks asynchronously as they arrive."""
         yield ""  # For generator typing
 
-    async def chat(self, messages: list[LLMMessage]) -> str:
+    async def chat(
+        self,
+        messages: list[LLMMessage],
+        tools: Optional[list[dict]] = None,
+    ) -> str:
         """Non-streaming fallback."""
         chunks: list[str] = []
-        async for chunk in self.stream_chat(messages):
+        try:
+            if tools is not None:
+                gen = self.stream_chat(messages, tools=tools)
+            else:
+                gen = self.stream_chat(messages)
+        except TypeError:
+            gen = self.stream_chat(messages)
+
+        async for chunk in gen:
             chunks.append(chunk)
         return "".join(chunks)

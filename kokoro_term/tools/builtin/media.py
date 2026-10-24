@@ -7,6 +7,7 @@ import shutil
 import urllib.parse
 from typing import Any, Optional
 from kokoro_term.tools.base import BaseTool, ToolResult
+from kokoro_term.tools.gui_env import open_url_or_site, spawn_gui_process
 
 
 class MediaControlTool(BaseTool):
@@ -234,32 +235,33 @@ class YouTubePlayTool(BaseTool):
             encoded = urllib.parse.quote_plus(q)
             url = f"https://www.youtube.com/results?search_query={encoded}"
 
-        if player == "mpv" and shutil.which("mpv"):
-            # Launch mpv in background
-            try:
-                proc = await asyncio.create_subprocess_exec(
-                    "mpv", "--no-terminal", url,
-                    stdout=asyncio.subprocess.DEVNULL,
-                    stderr=asyncio.subprocess.DEVNULL,
+        if player == "mpv":
+            if not shutil.which("mpv"):
+                return ToolResult(
+                    success=False,
+                    output="",
+                    error="mpv is not installed. To install on Arch: sudo pacman -S mpv",
+                    detail="mpv binary not found in PATH.",
                 )
-                return ToolResult(success=True, output=f"Launched mpv playing '{q}' (PID {proc.pid})")
-            except Exception as e:
-                return ToolResult(success=False, output="", error=f"Failed to launch mpv: {e}")
+            res = spawn_gui_process(["mpv", "--no-terminal", url], wait_sec=2.0)
+            return ToolResult(
+                success=res["ok"],
+                output=res["detail"],
+                error=res["stderr"] or (None if res["ok"] else res["detail"]),
+                pid=res["pid"],
+                exit_code=res["exit_code"],
+                stderr=res["stderr"],
+                detail=res["detail"],
+            )
 
         # Default: open in browser
-        browser = shutil.which("brave") or shutil.which("chromium") or shutil.which("firefox")
-        try:
-            if browser:
-                proc = await asyncio.create_subprocess_exec(
-                    browser, url,
-                    stdout=asyncio.subprocess.DEVNULL,
-                    stderr=asyncio.subprocess.DEVNULL,
-                )
-                return ToolResult(success=True, output=f"Opened YouTube in {browser.split('/')[-1]}: {url}")
-            else:
-                import webbrowser
-                loop = asyncio.get_running_loop()
-                await loop.run_in_executor(None, webbrowser.open, url)
-                return ToolResult(success=True, output=f"Opened YouTube in default browser: {url}")
-        except Exception as e:
-            return ToolResult(success=False, output="", error=f"Failed to open browser: {e}")
+        res = open_url_or_site(url, wait_sec=2.0)
+        return ToolResult(
+            success=res["ok"],
+            output=res["detail"],
+            error=res["stderr"] or (None if res["ok"] else res["detail"]),
+            pid=res["pid"],
+            exit_code=res["exit_code"],
+            stderr=res["stderr"],
+            detail=res["detail"],
+        )

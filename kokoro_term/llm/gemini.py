@@ -42,7 +42,11 @@ class GeminiProvider(LLMProvider):
 
         return system_instruction, contents
 
-    async def stream_chat(self, messages: list[LLMMessage]) -> AsyncIterator[str]:
+    async def stream_chat(
+        self,
+        messages: list[LLMMessage],
+        tools: Optional[list[dict]] = None,
+    ) -> AsyncIterator[str]:
         if not self.api_key:
             yield "[Error: GEMINI_API_KEY is not configured. Please set GEMINI_API_KEY in .env or your environment.]"
             return
@@ -57,6 +61,8 @@ class GeminiProvider(LLMProvider):
         }
         if sys_inst:
             payload["system_instruction"] = sys_inst
+        if tools:
+            payload["tools"] = tools
 
         url = f"{self.base_url}/models/{self.model}:streamGenerateContent?key={self.api_key}&alt=sse"
 
@@ -81,7 +87,13 @@ class GeminiProvider(LLMProvider):
                             if candidates:
                                 parts = candidates[0].get("content", {}).get("parts", [])
                                 for part in parts:
-                                    if "text" in part:
+                                    if "functionCall" in part:
+                                        fn_call = part["functionCall"]
+                                        fn_name = fn_call.get("name")
+                                        fn_args = fn_call.get("args", {})
+                                        call_json = json.dumps({"name": fn_name, "arguments": fn_args})
+                                        yield f"<tool_call>{call_json}</tool_call>"
+                                    elif "text" in part:
                                         yield part["text"]
                         except json.JSONDecodeError:
                             continue

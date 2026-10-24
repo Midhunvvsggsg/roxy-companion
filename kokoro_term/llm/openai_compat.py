@@ -24,7 +24,11 @@ class OpenAICompatProvider(LLMProvider):
         self.temperature = temperature
         self.max_tokens = max_tokens
 
-    async def stream_chat(self, messages: list[LLMMessage]) -> AsyncIterator[str]:
+    async def stream_chat(
+        self,
+        messages: list[LLMMessage],
+        tools: Optional[list[dict]] = None,
+    ) -> AsyncIterator[str]:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",

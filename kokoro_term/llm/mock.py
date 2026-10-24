@@ -13,14 +13,29 @@ class MockProvider(LLMProvider):
         self.character_name = character_name
         self.delay = delay
 
-    async def stream_chat(self, messages: list[LLMMessage]) -> AsyncIterator[str]:
+    async def stream_chat(
+        self,
+        messages: list[LLMMessage],
+        tools: Optional[list[dict]] = None,
+    ) -> AsyncIterator[str]:
         last_user_msg = ""
         for m in reversed(messages):
             if m.role == "user":
                 last_user_msg = m.content.lower()
                 break
 
-        if "hello" in last_user_msg or "hi" in last_user_msg:
+        if "[system observation from tool" in last_user_msg or "result:" in last_user_msg:
+            if "error" in last_user_msg or "false" in last_user_msg:
+                full_reply = "[emotion:surprise] It failed with an error. Would you like me to try an alternative?"
+            else:
+                full_reply = "[emotion:smile] Completed successfully!"
+        elif "open yt" in last_user_msg or "open youtube" in last_user_msg:
+            full_reply = 'On it! <tool_call>{"name": "open_app", "arguments": {"app_name": "youtube"}}</tool_call>'
+        elif "play" in last_user_msg and ("song" in last_user_msg or "music" in last_user_msg):
+            full_reply = 'Starting playback. <tool_call>{"name": "youtube_play", "arguments": {"query": "music", "player": "browser"}}</tool_call>'
+        elif "stop the music" in last_user_msg or "stop music" in last_user_msg:
+            full_reply = 'Stopping music. <tool_call>{"name": "media_control", "arguments": {"action": "stop"}}</tool_call>'
+        elif "hello" in last_user_msg or "hi" in last_user_msg:
             full_reply = (
                 "[emotion:neutral] Greetings. I am Roxy Migurdia. Are you ready for today's lesson, "
                 "or did you have a specific question about your terminal environment?"

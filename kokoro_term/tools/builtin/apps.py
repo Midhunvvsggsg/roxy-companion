@@ -5,19 +5,21 @@ from __future__ import annotations
 import asyncio
 import os
 import platform
+import shlex
 import shutil
 import subprocess
 from typing import Any, Optional
 from kokoro_term.tools.base import BaseTool, ToolResult
+from kokoro_term.tools.gui_env import open_url_or_site, spawn_gui_process
 
 
 class OpenAppTool(BaseTool):
     name = "open_app"
-    description = "Launch a desktop application or binary in the background (e.g. 'brave', 'mpv', 'foot', 'code', 'discord')."
+    description = "Launch a desktop application, website, or binary in the background (e.g. 'youtube', 'brave', 'mpv', 'foot', 'code', 'discord')."
     parameters = {
         "app_name": {
             "type": "string",
-            "description": "Application executable name or binary (e.g. 'brave', 'mpv', 'code', 'foot')",
+            "description": "Application executable name, site name, or binary (e.g. 'youtube', 'brave', 'mpv', 'code', 'foot')",
         },
         "args": {
             "type": "string",
@@ -28,40 +30,48 @@ class OpenAppTool(BaseTool):
 
     async def execute(self, app_name: str, args: Optional[str] = None, **kwargs) -> ToolResult:
         app = app_name.strip()
-        system = platform.system().lower()
+        low = app.lower()
 
-        # Check if binary is in PATH
+        # Handle web / site shortcuts seamlessly
+        if low in ("youtube", "yt"):
+            res = open_url_or_site("https://www.youtube.com", wait_sec=2.0)
+            return ToolResult(
+                success=res["ok"],
+                output=res["detail"],
+                error=res["stderr"] or (None if res["ok"] else res["detail"]),
+                pid=res["pid"],
+                exit_code=res["exit_code"],
+                stderr=res["stderr"],
+                detail=res["detail"],
+            )
+
+        system = platform.system().lower()
         bin_path = shutil.which(app)
 
-        try:
-            if bin_path:
-                cmd = [bin_path]
-                if args:
-                    import shlex
-                    cmd.extend(shlex.split(args))
+        if bin_path:
+            cmd = [bin_path]
+            if args:
+                cmd.extend(shlex.split(args))
+        else:
+            if system == "linux":
+                cmd = ["xdg-open", app]
+            elif system == "darwin":
+                cmd = ["open", "-a", app]
+            elif system == "windows":
+                cmd = ["cmd.exe", "/c", "start", "", app]
             else:
-                if system == "linux":
-                    cmd = ["xdg-open", app]
-                elif system == "darwin":
-                    cmd = ["open", "-a", app]
-                elif system == "windows":
-                    cmd = ["cmd.exe", "/c", "start", "", app]
-                else:
-                    cmd = [app]
+                cmd = [app]
 
-            # Launch detached so the Python agent doesn't hang
-            proc = subprocess.Popen(
-                cmd,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                start_new_session=True,
-            )
-            return ToolResult(
-                success=True,
-                output=f"Successfully launched '{app}' in background (PID {proc.pid}).",
-            )
-        except Exception as e:
-            return ToolResult(success=False, output="", error=f"Failed to launch '{app}': {e}")
+        res = spawn_gui_process(cmd, wait_sec=2.0)
+        return ToolResult(
+            success=res["ok"],
+            output=res["detail"],
+            error=res["stderr"] or (None if res["ok"] else res["detail"]),
+            pid=res["pid"],
+            exit_code=res["exit_code"],
+            stderr=res["stderr"],
+            detail=res["detail"],
+        )
 
 
 class KillProcessTool(BaseTool):
@@ -136,29 +146,20 @@ class CheckAppRunningTool(BaseTool):
 
 class OpenUrlTool(BaseTool):
     name = "open_url"
-    description = "Open a webpage URL in the user's web browser."
+    description = "Open a webpage URL or website (e.g. 'https://www.youtube.com', 'youtube', 'github') in the user's web browser."
     parameters = {
-        "url": {"type": "string", "description": "The web URL to open (must start with http:// or https://)"},
+        "url": {"type": "string", "description": "The web URL or site to open (e.g. 'https://www.youtube.com' or 'youtube')"},
     }
     tier = "moderate"
 
     async def execute(self, url: str, **kwargs) -> ToolResult:
-        if not (url.startswith("http://") or url.startswith("https://")):
-            return ToolResult(success=False, output="", error="URL must begin with http:// or https://")
-
-        browser = shutil.which("brave") or shutil.which("chromium") or shutil.which("firefox")
-        try:
-            if browser:
-                subprocess.Popen(
-                    [browser, url],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    start_new_session=True,
-                )
-            else:
-                import webbrowser
-                loop = asyncio.get_running_loop()
-                await loop.run_in_executor(None, webbrowser.open, url)
-            return ToolResult(success=True, output=f"Opened URL: {url}")
-        except Exception as e:
-            return ToolResult(success=False, output="", error=str(e))
+        res = open_url_or_site(url, wait_sec=2.0)
+        return ToolResult(
+            success=res["ok"],
+            output=res["detail"],
+            error=res["stderr"] or (None if res["ok"] else res["detail"]),
+            pid=res["pid"],
+            exit_code=res["exit_code"],
+            stderr=res["stderr"],
+            detail=res["detail"],
+        )

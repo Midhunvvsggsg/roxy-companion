@@ -18,7 +18,38 @@ from kokoro_term.tools.permission import PermissionManager
 from kokoro_term.tools.registry import ToolRegistry
 from kokoro_term.tools.resistance import ResistanceManager
 
-TOOL_CALL_REGEX = re.compile(r"<tool_call>\s*({.*?})\s*</tool_call>", re.DOTALL)
+ACTION_WORDS = {
+    "open", "play", "search", "install", "set", "stop", "turn", "show", "find",
+    "launch", "run", "start", "kill", "close", "mute", "unmute", "volume",
+    "brightness", "git", "read", "write", "delete", "remove", "check", "screen",
+    "look", "see", "watch", "exec", "help", "pause", "resume", "louder", "quieter"
+}
+
+APP_SITE_NAMES = {
+    "yt", "youtube", "browser", "brave", "firefox", "chrome", "chromium",
+    "terminal", "foot", "code", "vscode", "discord", "spotify", "mpv", "vlc",
+    "git", "web", "google"
+}
+
+
+def should_include_tools(message: str) -> bool:
+    """Return True if message has action words, app/site names, or is not pure greeting."""
+    if not message or not message.strip():
+        return False
+    low = message.strip().lower()
+    cleaned = re.sub(r"[^\w\s]", " ", low)
+    words = set(cleaned.split())
+
+    # If any action word or app/site name is mentioned, tool schemas MUST be attached
+    if words.intersection(ACTION_WORDS) or words.intersection(APP_SITE_NAMES):
+        return True
+
+    # Check for pure greetings and chitchat
+    pure_greetings = {"hi", "hello", "hey", "good morning", "good evening", "good afternoon", "good night", "howdy", "sup", "yo"}
+    if low in pure_greetings or (len(words) <= 2 and words.issubset(pure_greetings)):
+        return False
+
+    return True
 
 
 class AgentLoop:
@@ -42,16 +73,44 @@ class AgentLoop:
 
     def parse_tool_calls(self, text: str) -> list[tuple[str, dict]]:
         calls = []
-        for match in TOOL_CALL_REGEX.finditer(text):
-            raw_json = match.group(1).strip()
+        matches = re.finditer(r"<tool_call>(.*?)</tool_call>", text, re.DOTALL)
+        for m in matches:
+            block = m.group(1).strip()
+            # Strip markdown code fences if model enclosed JSON
+            block = re.sub(r"^```(?:json)?\s*", "", block, flags=re.IGNORECASE)
+            block = re.sub(r"\s*```$", "", block)
+
+            # 1. Direct JSON parse
             try:
-                data = json.loads(raw_json)
+                data = json.loads(block)
                 name = data.get("name")
                 args = data.get("arguments", {})
                 if name:
                     calls.append((name, args))
+                    continue
             except Exception:
                 pass
+
+            # 2. Balanced brace extraction fallback
+            start_idx = block.find("{")
+            if start_idx != -1:
+                depth = 0
+                for i in range(start_idx, len(block)):
+                    if block[i] == "{":
+                        depth += 1
+                    elif block[i] == "}":
+                        depth -= 1
+                        if depth == 0:
+                            try:
+                                candidate = block[start_idx : i + 1]
+                                data = json.loads(candidate)
+                                name = data.get("name")
+                                args = data.get("arguments", {})
+                                if name:
+                                    calls.append((name, args))
+                            except Exception:
+                                pass
+                            break
         return calls
 
     async def execute_tool(
@@ -127,6 +186,11 @@ class AgentLoop:
         conversation = list(messages)
         step = 0
 
+        # Determine if tool schemas should be passed to provider
+        last_user_msg = next((m.content for m in reversed(conversation) if m.role == "user"), "")
+        include_tools = should_include_tools(last_user_msg)
+        tools_schema = self.registry.to_gemini_tools() if include_tools else None
+
         while step < self.max_steps:
             if stop_event and stop_event.is_set():
                 yield {"type": "stop", "message": "Agent execution stopped by user."}
@@ -135,14 +199,60 @@ class AgentLoop:
             step += 1
             yield {"type": "step", "step": step, "max_steps": self.max_steps}
 
-            # 1. Plan & LLM generation
+            # 1. Plan & LLM generation with streaming token filtering (never show <tool_call> to client)
             full_response = ""
-            async for chunk in llm.stream_chat(conversation):
+            stream_buffer = ""
+            inside_tool_tag = False
+
+            try:
+                if tools_schema is not None:
+                    stream_gen = llm.stream_chat(conversation, tools=tools_schema)
+                else:
+                    stream_gen = llm.stream_chat(conversation)
+            except TypeError:
+                stream_gen = llm.stream_chat(conversation)
+
+            async for chunk in stream_gen:
                 if stop_event and stop_event.is_set():
                     yield {"type": "stop", "message": "Agent execution stopped by user."}
                     return
                 full_response += chunk
-                yield {"type": "token", "token": chunk}
+                stream_buffer += chunk
+
+                while stream_buffer:
+                    if inside_tool_tag:
+                        end_idx = stream_buffer.find("</tool_call>")
+                        if end_idx != -1:
+                            inside_tool_tag = False
+                            stream_buffer = stream_buffer[end_idx + len("</tool_call>") :]
+                        else:
+                            break
+                    else:
+                        start_idx = stream_buffer.find("<tool_call")
+                        if start_idx != -1:
+                            prefix = stream_buffer[:start_idx]
+                            if prefix:
+                                yield {"type": "token", "token": prefix}
+                            inside_tool_tag = True
+                            stream_buffer = stream_buffer[start_idx:]
+                        else:
+                            if "<" in stream_buffer:
+                                last_lt = stream_buffer.rfind("<")
+                                candidate = stream_buffer[last_lt:]
+                                if "<tool_call>".startswith(candidate):
+                                    prefix = stream_buffer[:last_lt]
+                                    if prefix:
+                                        yield {"type": "token", "token": prefix}
+                                    stream_buffer = candidate
+                                    break
+                            yield {"type": "token", "token": stream_buffer}
+                            stream_buffer = ""
+
+            if stream_buffer and not inside_tool_tag and not stream_buffer.startswith("<tool_call"):
+                clean_flush = re.sub(r"<tool_call>.*?</tool_call>", "", stream_buffer, flags=re.DOTALL)
+                clean_flush = re.sub(r"<tool_call.*$", "", clean_flush, flags=re.DOTALL)
+                if clean_flush:
+                    yield {"type": "token", "token": clean_flush}
 
             # 2. Check for tool calls
             tool_calls = self.parse_tool_calls(full_response)
@@ -206,6 +316,7 @@ class AgentLoop:
                     "success": result.success,
                     "output": out_display,
                     "tier": tier,
+                    "structured": result.to_dict(),
                 }
 
                 # 4. Observe: Sanitize and wrap untrusted data, append to conversation
