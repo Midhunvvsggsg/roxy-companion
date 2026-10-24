@@ -1,8 +1,101 @@
-engine: "kokoro"
-voice_id: "af_sarah"
-speed: 1.05
-pitch: 1.0
-lang: "en-us"
+# TTS Provider Configuration
+# - 'edge': Online cloud provider (using Microsoft Edge Speech service)
+# - 'local': 100% private offline default (zero network bytes, zero data sent to external servers)
+# PRIVACY NOTICE:
+# Edge-TTS connects to an unofficial Microsoft Read Aloud endpoint (speech.platform.bing.com).
+# Only the final clean spoken text is sent. Tool outputs, file contents, memory databases,
+# and screenshots are strictly NEVER transmitted to the cloud.
+provider: "edge"
+fallback_to_local: true
+
+engine: "edge-tts"
+voice_id: "ja-JP-NanamiNeural"
+preset: "young_japanese_girl_energetic"
+speed: 1.28
+pitch: 20
+lang: "ja-JP"
+
+# Natural pause timings (milliseconds - snappy young anime cadence)
+pause_comma_ms: 75
+pause_sentence_ms: 160
+trim_silence: true
+
+# Per-emotion pace multipliers (relative to base speed 1.28x)
+# High energy, fast, spirited anime delivery
+emotion_pace:
+  neutral: 1.0       # 1.28x
+  teasing: 1.08      # ~1.38x
+  flustered: 1.12    # ~1.43x
+  blush: 1.08        # ~1.38x
+  shy: 0.98          # ~1.25x
+  serious: 1.02      # ~1.31x
+  commanding: 1.04   # ~1.33x
+  angry: 1.06        # ~1.36x
+  caring: 0.98       # ~1.25x
+  gentle: 0.98       # ~1.25x
+  happy: 1.08        # ~1.38x
+  smile: 1.06        # ~1.36x
+  surprise: 1.10     # ~1.41x
+
+# Emotion pitch adjustments (Hz offset relative to base_pitch +20Hz)
+# ja-JP-NanamiNeural: youthful, vibrant anime girl register (~305-325Hz)
+emotion_pitch:
+  neutral: 0         # +20Hz base (bright, youthful)
+  teasing: 6         # +26Hz playful
+  flustered: 10      # +30Hz cute high-pitched fluster
+  blush: 8           # +28Hz
+  shy: 3             # +23Hz
+  serious: -2        # +18Hz focused, earnest
+  commanding: -1     # +19Hz
+  angry: 5           # +25Hz pouting tsundere
+  caring: 2          # +22Hz sweet affection
+  gentle: 2          # +22Hz
+  happy: 8           # +28Hz cheerful and lively
+  smile: 5           # +25Hz
+  surprise: 12       # +32Hz animated surprise
+
+# Japanese-style slang styling
 speech_style:
   accent: "soft_jp"
+  accent_strength: 0.3
   stutter_on_blush: true
+  slang_words:
+    - "ara"
+    - "fufu"
+    - "mou"
+    - "ne"
+    - "yosh"
+    - "hora"
+    - "sugoi"
+    - "baka"
+    - "yare yare"
+    - "ganbatte"
+    - "-san"
+    - "-kun"
+
+# Pronunciation map for native Japanese voice ja-JP-NanamiNeural.
+# Japanese slang words are kept in pure natural romaji so Nanami speaks them with native anime seiyuu cadence.
+pronunciation_map:
+  ara: "ara"
+  Ara: "Ara"
+  fufu: "fufu"
+  Fufu: "Fufu"
+  mou: "mou"
+  Mou: "Mou"
+  ne: "ne"
+  yosh: "yosh"
+  Yosh: "Yosh"
+  hora: "hora"
+  Hora: "Hora"
+  sugoi: "sugoi"
+  Sugoi: "Sugoi"
+  baka: "baka"
+  Baka: "Baka"
+  yare yare: "yare yare"
+  Yare yare: "Yare yare"
+  ganbatte: "ganbatte"
+  Ganbatte: "Ganbatte"
+  "-san": "-san"
+  "-kun": "-kun"
+  Opppah: "Oppa"
+  opppah: "oppa"

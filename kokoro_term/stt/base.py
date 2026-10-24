@@ -11,6 +11,7 @@ class STTResult(BaseModel):
     confidence: float = 1.0
     duration_sec: float = 0.0
     is_unclear: bool = False
+    is_low_confidence: bool = False
 
 
 class STTProvider(ABC):

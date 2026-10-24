@@ -28,11 +28,34 @@ HALLUCINATION_PATTERNS = {
     "amara.org",
 }
 
-MANGLISH_INITIAL_PROMPT = (
+ROXY_VARIANTS = re.compile(
+    r'\b(?:o[hx]y|rock\s*see|rock\s*sea|roxie|roxi|rocksey|roxey|rock-see|oxey)\b',
+    re.IGNORECASE,
+)
+ROCKY_LEAD_VARIANT = re.compile(
+    r'\b(hey\s+|hi\s+|yo\s+)?rocky\b(?=\s*[,.]|\s+(?:play|open|what|can|please|search|stop|who|tell))',
+    re.IGNORECASE,
+)
+
+
+def fuzzy_correct_roxy_name(text: str) -> str:
+    """Fuzzy match common STT mishearings of 'Roxy' ('Oxy', 'Rock see', 'Roxie', etc.)."""
+    if not text:
+        return text
+    corrected = ROXY_VARIANTS.sub("Roxy", text)
+    corrected = ROCKY_LEAD_VARIANT.sub(lambda m: f"{m.group(1) or ''}Roxy", corrected)
+    return corrected
+
+
+CUSTOM_VOCABULARY_PROMPT = (
+    "Roxy, Midhun, Midhun-san, Opppah, YouTube, Spotify, Chrome, Firefox, "
+    "VS Code, Discord, terminal, mpv, yt-dlp, play, stop, open, search, "
+    "pause, resume, louder, quieter, music, volume. "
     "English conversation with Manglish phrases such as: "
     "enthokkeyundu, vishesham, njan, ippo, varam, sukhamano, sherikkum, "
     "namaskaram, pinne, cheyyuka, entha, evide, engane."
 )
+MANGLISH_INITIAL_PROMPT = CUSTOM_VOCABULARY_PROMPT
 
 
 class FasterWhisperProvider(STTProvider):
@@ -100,14 +123,14 @@ class FasterWhisperProvider(STTProvider):
                 audio_arr = np.array(audio_data, dtype=np.float32)
 
             if len(audio_arr) == 0:
-                return "", "en", 0.0, False
+                return "", "en", 0.0, False, False
 
             # Energy gate: check peak and RMS level
             peak = float(np.max(np.abs(audio_arr)))
             rms = float(np.sqrt(np.mean(audio_arr**2)))
             if peak < 0.012 or rms < 0.003:
                 # Dead air / pure room silence
-                return "", "en", 0.0, False
+                return "", "en", 0.0, False, False
 
             # AGC (Automatic Gain Control) normalization
             if 0 < peak < 0.65:
@@ -146,18 +169,22 @@ class FasterWhisperProvider(STTProvider):
                     probs.append(min(1.0, max(0.0, float(np.exp(seg.avg_logprob)))))
 
             text = " ".join(collected_texts).strip()
+            text = fuzzy_correct_roxy_name(text)
             confidence = float(np.mean(probs)) if probs else float(info.language_probability)
 
-            # Check if text is gibberish, empty, or too low confidence
+            # Check if text is gibberish, empty, or low confidence
             is_unclear = False
+            is_low_confidence = False
             if not text:
                 is_unclear = False  # Pure silence
-            elif confidence < 0.30 or (len(text) <= 3 and confidence < 0.50):
+            elif confidence < 0.35 or (len(text) <= 3 and confidence < 0.50):
                 is_unclear = True
+            elif confidence < 0.65 or any(getattr(s, "no_speech_prob", 0) > 0.6 for s in segments):
+                is_low_confidence = True
 
-            return text, info.language, confidence, is_unclear
+            return text, info.language, confidence, is_unclear, is_low_confidence
 
-        text, lang, prob, is_unclear = await loop.run_in_executor(None, _run_transcribe)
+        text, lang, prob, is_unclear, is_low_confidence = await loop.run_in_executor(None, _run_transcribe)
         duration = time.perf_counter() - start_time
 
         return STTResult(
@@ -166,4 +193,5 @@ class FasterWhisperProvider(STTProvider):
             confidence=prob,
             duration_sec=duration,
             is_unclear=is_unclear,
+            is_low_confidence=is_low_confidence,
         )

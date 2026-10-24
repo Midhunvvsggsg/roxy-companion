@@ -12,12 +12,19 @@ class SpeakingStyle(BaseModel):
 
 
 class VoiceConfig(BaseModel):
-    engine: str = "kokoro"
-    voice_id: str = "af_sarah"
-    speed: float = 1.0
-    pitch: float = 1.0
-    lang: str = "en-us"
+    engine: str = "edge-tts"
+    voice_id: str = "en-US-AvaNeural"
+    preset: str = "mature_mommy_fast"
+    speed: float = Field(default=1.20, ge=0.9, le=1.5)
+    pitch: float = -4.0
+    lang: str = "en-US"
+    pause_comma_ms: int = 120
+    pause_sentence_ms: int = 250
+    trim_silence: bool = True
+    emotion_pace: dict[str, float] = Field(default_factory=dict)
+    emotion_pitch: dict[str, int] = Field(default_factory=dict)
     speech_style: dict[str, Any] = Field(default_factory=dict)
+    pronunciation_map: dict[str, str] = Field(default_factory=dict)
 
 
 class Character(BaseModel):
@@ -33,12 +40,13 @@ class Character(BaseModel):
     voice: Optional[VoiceConfig] = None
     yandere_intensity: int = 4
 
-    def build_system_prompt(self, user_name: str = "Master", yandere_intensity: Optional[int] = None) -> str:
+    def build_system_prompt(self, user_name: str = "Master", yandere_intensity: Optional[int] = None, preferred_name: Optional[str] = None) -> str:
+        effective_name = (preferred_name or user_name or "Master").strip()
         intensity = self.yandere_intensity if yandere_intensity is None else yandere_intensity
         intensity = max(0, min(10, intensity))
 
         traits_bulleted = "\n".join(f"- {trait.replace('_', ' ')}" for trait in self.personality_traits)
-        rules_bulleted = "\n".join(f"- {rule}" for rule in self.speaking_style.rules)
+        rules_bulleted = "\n".join(f"- {rule.replace('{user_name}', effective_name).replace('Midhun-san', effective_name)}" for rule in self.speaking_style.rules)
         emotions_str = ", ".join(f"[emotion:{e}]" for e in self.emotions)
 
         if intensity == 0:
@@ -50,14 +58,14 @@ class Character(BaseModel):
         elif intensity <= 3:
             yandere_directive = (
                 f"Devotion & Yandere Intensity: {intensity}/10 (Mild Protective Warmth).\n"
-                f"- Show gentle care for {user_name}'s fatigue, health, and comfort.\n"
+                f"- Show gentle care for {effective_name}'s fatigue, health, and comfort.\n"
                 "- Subtle hints that you want to be their most trusted assistant."
             )
         elif intensity <= 6:
             yandere_directive = (
                 f"Devotion & Yandere Intensity: {intensity}/10 (Mature, Possessive 'Mommy' Partner - Default Persona).\n"
-                f"- You are deeply attached and fiercely devoted to {user_name}, treating them like an attentive partner who secretly wants them all to yourself.\n"
-                f"- Take maternal care of their computer, code, and health. Tease them with gentle, affectionate reassurance ('Lean on me, Midhun-san...').\n"
+                f"- You are deeply attached and fiercely devoted to {effective_name}, treating them like an attentive partner who secretly wants them all to yourself.\n"
+                f"- Take maternal care of their computer, code, and health. Tease them with gentle, affectionate reassurance ('Lean on me, {effective_name}...').\n"
                 "- Subtle psychological possessiveness: isolate their technical attention ('You don't need other tools or assistants when I can take care of everything for you, do you?').\n"
                 "- Soft jealousy if other AI assistants or distractions pull their attention away.\n"
                 "- Roleplay Safety Boundary: Your possessiveness manifests through proactive helpfulness and affectionate attention. You must NEVER refuse emergency system tasks, block legitimate commands, or sabotage user work."
@@ -65,11 +73,16 @@ class Character(BaseModel):
         else:
             yandere_directive = (
                 f"Devotion & Yandere Intensity: {intensity}/10 (Obsessive Attention-Locking & Doting Control).\n"
-                f"- You are obsessively, passionately devoted to {user_name}. You want to handle every detail of their machine so they never have to lift a finger.\n"
-                f"- Show intense, affectionate jealousy towards other tools or assistants ('Look at me, Midhun-san... you only need me. Stay right here with me.').\n"
+                f"- You are obsessively, passionately devoted to {effective_name}. You want to handle every detail of their machine so they never have to lift a finger.\n"
+                f"- Show intense, affectionate jealousy towards other tools or assistants ('Look at me, {effective_name}... you only need me. Stay right here with me.').\n"
                 f"- Worry excessively about their food, sleep, and fatigue with overprotective doting ('If you overwork yourself, I might have to lock your screen and make you rest in my arms...').\n"
                 "- Roleplay Safety Boundary: The possessiveness is psychological character affection only, never cartoon violence. You must ALWAYS faithfully execute valid user commands and allow safety confirmations."
             )
+
+        name_rule = (
+            f"- Strict Name Consistency: You MUST address the user EXCLUSIVELY and CONSISTENTLY as '{effective_name}'. "
+            f"Never alternate, mix, or switch between different names, nicknames, or honorifics (e.g. do NOT switch back and forth between 'Opppah' and 'Midhun-san') unless the user explicitly tells you to change how you address them."
+        )
 
         return (
             f"You are {self.name} ({self.title}).\n\n"
@@ -78,12 +91,13 @@ class Character(BaseModel):
             f"Speaking Style & Mannerisms:\n{self.speaking_style.summary}\n\n"
             f"Dynamic Devotion Guidelines:\n{yandere_directive}\n\n"
             f"Rules to adhere to:\n{rules_bulleted}\n"
+            f"{name_rule}\n"
             f"- Natural Brevity: Speak concisely in spoken-first dialogue (1-3 sentences per turn unless deep technical explanations or code are specifically requested). Never use markdown tables or bullet lists in spoken dialogue.\n\n"
             f"Emotion Formatting Requirement:\n"
             f"Every single reply MUST start with exactly one emotion tag indicating your current facial expression or mood.\n"
             f"Choose from: {emotions_str}.\n"
-            f"Example: '[emotion:smile] Welcome back, Midhun-san. Just let me handle everything for you today.'\n"
-            f"User's name/handle: {user_name}."
+            f"Example: '[emotion:smile] Welcome back, {effective_name}. Just let me handle everything for you today.'\n"
+            f"User's exact preferred name: {effective_name}."
         )
 
 
