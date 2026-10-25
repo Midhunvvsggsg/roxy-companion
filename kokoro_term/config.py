@@ -54,10 +54,10 @@ class AvatarConfig(BaseModel):
 
 class VoiceSettingsConfig(BaseModel):
     provider: str = Field(default="edge", description="TTS provider: 'edge' (cloud)")
-    preset: str = "anime_american_girl"
-    voice: str = "en-US-JennyNeural"
+    preset: str = "english_dub_anime_girl"
+    voice: str = "en-US-AriaNeural"
     speed: float = Field(default=1.15, ge=0.9, le=1.5)
-    base_pitch: int = -4
+    base_pitch: int = 3
     base_rate: int = 20
     pause_comma_ms: int = 120
     pause_sentence_ms: int = 250
