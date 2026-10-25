@@ -127,82 +127,101 @@ def parse_date_hint(text: str) -> str:
     return ""
 
 
+def extract_readable_text(raw_html: str, max_chars: int = 4000) -> str:
+    """Extract readable text using trafilatura or readability if available, falling back to clean_html_to_text."""
+    if not raw_html:
+        return ""
+    try:
+        import trafilatura
+        extracted = trafilatura.extract(raw_html)
+        if extracted:
+            return extracted[:max_chars]
+    except Exception:
+        pass
+    try:
+        from readability import Document
+        doc = Document(raw_html)
+        summary_html = doc.summary()
+        return clean_html_to_text(summary_html, max_chars=max_chars)
+    except Exception:
+        pass
+    return clean_html_to_text(raw_html, max_chars=max_chars)
+
+
 async def search_duckduckgo(query: str, kind: str = "general", max_results: int = 8) -> list[dict[str, str]]:
-    """Search DuckDuckGo HTML endpoint with kind/news filtering."""
+    """Search DuckDuckGo HTML and Lite endpoints using GET with kind/news filtering and anti-bot fallback."""
     search_q = query.strip()
     if kind == "news" and not any(k in search_q.lower() for k in ("news", "latest", "recent", "headline")):
         search_q = f"{search_q} latest news"
 
     headers = {
-        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/119.0",
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64)",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.5",
     }
-    data = {"q": search_q}
-    if kind == "news":
-        data["df"] = "w"  # Past week for news
-
     results: list[dict[str, str]] = []
+
+    # Strategy 1: GET html.duckduckgo.com/html/
     try:
         async with httpx.AsyncClient(headers=headers, follow_redirects=True, timeout=8.0) as client:
-            resp = await client.post("https://html.duckduckgo.com/html/", data=data)
-            if resp.status_code != 200:
-                return results
-
-            html_text = resp.text
-
-            # Look for result blocks
-            # Pattern matches snippet and link
-            blocks = re.findall(
-                r"<a[^>]+class=[\"'][^\"']*result__snippet[^\"']*[\"'][^>]*href=[\"']([^\"']+)[\"'][^>]*>(.*?)</a>",
-                html_text,
-                flags=re.DOTALL | re.IGNORECASE,
-            )
-            if not blocks:
-                blocks = re.findall(
-                    r"<a[^>]+class=[\"'][^\"']*result__a[^\"']*[\"'][^>]*href=[\"']([^\"']+)[\"'][^>]*>(.*?)</a>",
+            resp = await client.get("https://html.duckduckgo.com/html/", params={"q": search_q})
+            if resp.status_code == 200:
+                html_text = resp.text
+                matches = re.findall(
+                    r'<h2 class=[\"\']result__title[\"\']>\s*<a[^>]+class=[\"\']result__a[\"\'][^>]+href=[\"\']([^\"\']+)[\"\'][^>]*>(.*?)</a>.*?'
+                    r'<a[^>]+class=[\"\']result__snippet[\"\'][^>]*>(.*?)</a>',
                     html_text,
-                    flags=re.DOTALL | re.IGNORECASE,
+                    re.DOTALL | re.IGNORECASE,
                 )
+                seen_urls = set()
+                for raw_href, raw_title, raw_snippet in matches:
+                    m = re.search(r"uddg=([^&]+)", raw_href)
+                    real_url = unquote(m.group(1)) if m else raw_href
+                    if not real_url.startswith("http") or real_url in seen_urls:
+                        continue
+                    seen_urls.add(real_url)
 
-            seen_urls = set()
-            for raw_href, raw_snippet in blocks:
-                # Resolve redirect uddg
-                m = re.search(r"uddg=([^&]+)", raw_href)
-                real_url = unquote(m.group(1)) if m else raw_href
-                if not real_url.startswith("http"):
-                    continue
-                if any(bad in real_url.lower() for bad in ("duckduckgo.com", "ad_provider", "yandex", "bing.com")):
-                    continue
-                if real_url in seen_urls:
-                    continue
-                seen_urls.add(real_url)
-
-                clean_snippet = re.sub(r"<[^>]+>", "", raw_snippet).strip()
-                clean_snippet = html.unescape(clean_snippet)
-                clean_snippet = re.sub(r"\s+", " ", clean_snippet)
-
-                # Find matching title if available
-                title_match = re.search(
-                    r"<a[^>]+class=[\"'][^\"']*result__url[^\"']*[\"'][^>]*href=[\"']" + re.escape(raw_href) + r"[\"'][^>]*>(.*?)</a>",
-                    html_text,
-                    flags=re.DOTALL | re.IGNORECASE,
-                )
-                title = clean_html_to_text(title_match.group(1)) if title_match else ""
-                if not title:
-                    # Use first few words of snippet or domain
-                    domain = extract_domain(real_url)
-                    title = f"Report from {domain}"
-
-                results.append({
-                    "url": real_url,
-                    "title": title,
-                    "snippet": clean_snippet,
-                })
-                if len(results) >= max_results:
-                    break
+                    title = html.unescape(re.sub(r"<[^>]+>", "", raw_title)).strip()
+                    snippet = html.unescape(re.sub(r"<[^>]+>", "", raw_snippet)).strip()
+                    results.append({
+                        "url": real_url,
+                        "title": title,
+                        "snippet": snippet,
+                    })
+                    if len(results) >= max_results:
+                        break
     except Exception:
         pass
+
+    # Strategy 2: Fallback to lite.duckduckgo.com/lite/ if strategy 1 yielded no results
+    if not results:
+        try:
+            async with httpx.AsyncClient(headers=headers, follow_redirects=True, timeout=8.0) as client:
+                resp = await client.get("https://lite.duckduckgo.com/lite/", params={"q": search_q})
+                if resp.status_code == 200:
+                    html_text = resp.text
+                    links = re.findall(r'<a[^>]+href=[\"\']([^\"\']+)[\"\'][^>]*>(.*?)</a>', html_text)
+                    uddg_links = [l for l in links if "uddg=" in l[0]]
+                    snips = re.findall(r'<td class=[\"\']result-snippet[\"\']>(.*?)</td>', html_text, re.DOTALL)
+                    seen_urls = set()
+                    for i, (raw_href, raw_title) in enumerate(uddg_links):
+                        m = re.search(r"uddg=([^&]+)", raw_href)
+                        real_url = unquote(m.group(1)) if m else raw_href
+                        if not real_url.startswith("http") or real_url in seen_urls:
+                            continue
+                        seen_urls.add(real_url)
+
+                        title = html.unescape(re.sub(r"<[^>]+>", "", raw_title)).strip()
+                        snippet = html.unescape(re.sub(r"<[^>]+>", "", snips[i])).strip() if i < len(snips) else ""
+                        results.append({
+                            "url": real_url,
+                            "title": title,
+                            "snippet": snippet,
+                        })
+                        if len(results) >= max_results:
+                            break
+        except Exception:
+            pass
 
     return results
 
@@ -386,7 +405,7 @@ async def fetch_source_content(client: httpx.AsyncClient, item: dict[str, str], 
     try:
         resp = await client.get(url)
         if resp.status_code == 200:
-            extracted = clean_html_to_text(resp.text)
+            extracted = extract_readable_text(resp.text)
             if len(extracted) > len(snippet):
                 content = extracted
                 # If title was generic, try extracting <title>
