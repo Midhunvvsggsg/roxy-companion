@@ -207,6 +207,174 @@ async def search_duckduckgo(query: str, kind: str = "general", max_results: int 
     return results
 
 
+async def search_searxng(query: str, kind: str = "general", max_results: int = 8) -> list[dict[str, str]]:
+    """Search SearXNG public instances or local endpoint without API keys."""
+    search_q = query.strip()
+    instances = [
+        os.environ.get("SEARXNG_URL", "").rstrip("/"),
+        "https://searx.be",
+        "https://search.ononoki.org",
+        "https://searx.work",
+    ]
+    instances = [i for i in instances if i]
+    categories = "news" if kind == "news" else "general"
+
+    for inst in instances:
+        try:
+            async with httpx.AsyncClient(timeout=4.0) as client:
+                resp = await client.get(
+                    f"{inst}/search",
+                    params={"q": search_q, "format": "json", "categories": categories},
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    results = []
+                    for r in data.get("results", []):
+                        url = r.get("url", "")
+                        if not url.startswith("http"):
+                            continue
+                        results.append({
+                            "url": url,
+                            "title": r.get("title", ""),
+                            "snippet": r.get("content", ""),
+                        })
+                        if len(results) >= max_results:
+                            break
+                    if results:
+                        return results
+        except Exception:
+            continue
+    return []
+
+
+async def search_brave_api(query: str, kind: str = "general", max_results: int = 8) -> list[dict[str, str]]:
+    """Search via Brave Search API if BRAVE_API_KEY is configured."""
+    api_key = os.environ.get("BRAVE_API_KEY")
+    if not api_key:
+        return []
+
+    headers = {"Accept": "application/json", "X-Subscription-Token": api_key}
+    params = {"q": query.strip(), "count": max_results}
+    endpoint = "https://api.search.brave.com/res/v1/news/search" if kind == "news" else "https://api.search.brave.com/res/v1/web/search"
+
+    try:
+        async with httpx.AsyncClient(headers=headers, timeout=6.0) as client:
+            resp = await client.get(endpoint, params=params)
+            if resp.status_code == 200:
+                data = resp.json()
+                items = data.get("results", []) or data.get("web", {}).get("results", [])
+                results = []
+                for item in items:
+                    url = item.get("url", "")
+                    if url.startswith("http"):
+                        results.append({
+                            "url": url,
+                            "title": item.get("title", ""),
+                            "snippet": item.get("description", ""),
+                        })
+                        if len(results) >= max_results:
+                            break
+                return results
+    except Exception:
+        pass
+    return []
+
+
+async def search_gemini_grounding(query: str, kind: str = "general", max_results: int = 8) -> list[dict[str, str]]:
+    """Search via Gemini Google Search Grounding tool."""
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        return []
+
+    model = os.environ.get("KOKORO_LLM_MODEL", "gemini-flash-lite-latest")
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+    payload = {
+        "contents": [{"parts": [{"text": f"Search for {query} and list top sources with URLs."}]}],
+        "tools": [{"google_search": {}}],
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            resp = await client.post(url, json=payload)
+            if resp.status_code == 200:
+                data = resp.json()
+                cands = data.get("candidates", [])
+                if cands:
+                    g_meta = cands[0].get("groundingMetadata", {})
+                    chunks = g_meta.get("groundingChunks", [])
+                    results = []
+                    for c in chunks:
+                        web = c.get("web", {})
+                        u = web.get("uri", "")
+                        t = web.get("title", "")
+                        if u.startswith("http"):
+                            results.append({"url": u, "title": t, "snippet": t})
+                            if len(results) >= max_results:
+                                break
+                    if results:
+                        return results
+    except Exception:
+        pass
+    return []
+
+
+async def search_web_multi_provider(
+    query: str,
+    kind: str = "general",
+    preferred_provider: str = "ddg",
+    max_results: int = 8,
+) -> tuple[list[dict[str, str]], str]:
+    """Execute search using provider interface: search.provider = ddg | searxng | brave_api | gemini_grounding.
+
+    Auto-falls back to ddg or other available providers if requested provider fails or lacks keys.
+    Returns (results, actual_provider_used).
+    """
+    prov = (preferred_provider or os.environ.get("SEARCH_PROVIDER", "ddg")).lower().strip()
+
+    # Try preferred provider first
+    results: list[dict[str, str]] = []
+    if prov in ("gemini_grounding", "gemini"):
+        results = await search_gemini_grounding(query, kind=kind, max_results=max_results)
+        if results:
+            return results, "gemini_grounding"
+    elif prov in ("brave", "brave_api"):
+        results = await search_brave_api(query, kind=kind, max_results=max_results)
+        if results:
+            return results, "brave_api"
+    elif prov in ("searxng", "searx"):
+        results = await search_searxng(query, kind=kind, max_results=max_results)
+        if results:
+            return results, "searxng"
+    elif prov == "ddg":
+        results = await search_duckduckgo(query, kind=kind, max_results=max_results)
+        if results:
+            return results, "ddg"
+
+    # Auto-fallback sequence: ddg -> searxng -> brave -> gemini
+    fallback_sequence = ["ddg", "searxng", "brave_api", "gemini_grounding"]
+    for fb in fallback_sequence:
+        if fb == prov:
+            continue
+        if fb == "ddg":
+            results = await search_duckduckgo(query, kind=kind, max_results=max_results)
+            if results:
+                return results, "ddg"
+        elif fb == "searxng":
+            results = await search_searxng(query, kind=kind, max_results=max_results)
+            if results:
+                return results, "searxng"
+        elif fb == "brave_api":
+            results = await search_brave_api(query, kind=kind, max_results=max_results)
+            if results:
+                return results, "brave_api"
+        elif fb == "gemini_grounding":
+            results = await search_gemini_grounding(query, kind=kind, max_results=max_results)
+            if results:
+                return results, "gemini_grounding"
+
+    return [], prov
+
+
 async def fetch_source_content(client: httpx.AsyncClient, item: dict[str, str], index: int) -> ResearchSource:
     url = item["url"]
     snippet = item["snippet"]
@@ -451,12 +619,16 @@ class WebResearchTool(BaseTool):
                 },
             )
 
-        # 1. Search candidates (5-8 results)
-        raw_items = await search_duckduckgo(actual_query, kind=actual_kind, max_results=8)
-        if not raw_items:
+        # 1. Search candidates via multi-provider interface (ddg | searxng | brave_api | gemini_grounding)
+        preferred_provider = kwargs.get("provider") or os.environ.get("SEARCH_PROVIDER", "ddg")
+        raw_items, used_provider = await search_web_multi_provider(
+            actual_query, kind=actual_kind, preferred_provider=preferred_provider, max_results=8
+        )
+        if not raw_items and actual_kind == "news":
             # Fallback retry with general query
-            if actual_kind == "news":
-                raw_items = await search_duckduckgo(actual_query, kind="general", max_results=8)
+            raw_items, used_provider = await search_web_multi_provider(
+                actual_query, kind="general", preferred_provider=preferred_provider, max_results=8
+            )
 
         if not raw_items:
             return ToolResult(
@@ -502,5 +674,6 @@ class WebResearchTool(BaseTool):
                 "article": article.to_dict(),
                 "cached": False,
                 "sources_count": len(article.sources),
+                "provider": used_provider,
             },
         )
