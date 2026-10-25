@@ -116,3 +116,76 @@ def test_export_and_wipe_memory(temp_memory, tmp_path):
     temp_memory.wipe_memory("roxy", "user1")
     assert len(temp_memory.get_facts("roxy", "user1")) == 0
     assert len(temp_memory.get_recent_messages("roxy", "user1")) == 0
+
+
+class TestSection5NameMemoryAndSeparation:
+    def test_preferred_name_storage_and_override(self, temp_memory):
+        """User preferred name is stored as long-term fact overriding defaults."""
+        assert temp_memory.get_preferred_name("roxy", "user1") is None
+
+        # Store preferred name
+        fact = temp_memory.set_preferred_name("roxy", "user1", "Midhun-san")
+        assert fact.key == "preferred_name"
+        assert fact.value == "Midhun-san"
+        assert fact.category == "identity"
+
+        # Verify retrieval
+        pref = temp_memory.get_preferred_name("roxy", "user1")
+        assert pref == "Midhun-san"
+
+        # Update preferred name (e.g. to 'Opah')
+        temp_memory.set_preferred_name("roxy", "user1", "Opah")
+        assert temp_memory.get_preferred_name("roxy", "user1") == "Opah"
+
+    def test_preferred_name_injected_into_prompts(self, temp_memory):
+        """Stored preferred name is injected into system prompt and memory context."""
+        temp_memory.set_preferred_name("roxy", "user1", "Midhun-san")
+        pref = temp_memory.get_preferred_name("roxy", "user1")
+
+        # Context injection
+        context = temp_memory.build_context_injection("roxy", "user1")
+        assert "User Preferred Name & Identity" in context
+        assert "Midhun-san" in context
+
+        # Character prompt building
+        from kokoro_term.character import load_character
+        char = load_character("roxy")
+        prompt = char.build_system_prompt(user_name=pref, preferred_name=pref)
+        assert "Midhun-san" in prompt
+        assert "Strict Name Consistency" in prompt
+
+    @pytest.mark.asyncio
+    async def test_fast_name_extraction_from_conversational_turn(self, temp_memory):
+        """Statements like 'Call me X' or 'My name is X' are captured as preferred name."""
+        llm = MockConsolidationLLM()
+        facts = await temp_memory.extract_facts_from_turn(
+            "roxy",
+            "user1",
+            "From now on, please call me Opah.",
+            "Understood, Opah. I will address you accordingly.",
+            llm,
+        )
+        assert len(facts) >= 1
+        assert temp_memory.get_preferred_name("roxy", "user1") == "Opah"
+
+    def test_tts_respelling_separation_from_display_and_memory(self, temp_memory):
+        """Phonetic respellings apply strictly to TTS input, never modifying chat display or memory."""
+        from kokoro_term.tts.speech_style import apply_pronunciation_map, normalize_text_for_tts
+
+        raw_display_message = "Good morning, Midhun-san! Let's check the 100 MB update."
+        temp_memory.add_message("roxy", "user1", "assistant", raw_display_message)
+
+        # Retrieve stored message
+        recent = temp_memory.get_recent_messages("roxy", "user1")
+        assert recent[0].content == raw_display_message
+        assert "Midhun-san" in recent[0].content  # Never corrupted in storage
+
+        # TTS input processing only transforms the spoken stream
+        tts_input = normalize_text_for_tts(raw_display_message)
+        spoken_tts = apply_pronunciation_map(tts_input)
+        assert "one hundred megabytes" in tts_input
+
+        # Stored memory and display remain clean original text
+        assert "one hundred megabytes" not in raw_display_message
+        assert recent[0].content == raw_display_message
+

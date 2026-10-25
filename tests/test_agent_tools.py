@@ -125,3 +125,15 @@ async def test_agent_tool_execution(tmp_path):
     res = await loop.execute_tool(tool, {})
     assert res.success
     assert "OS:" in res.output
+
+
+@pytest.mark.asyncio
+async def test_git_tool_execution():
+    from kokoro_term.tools.builtin.git_tool import GitTool
+    tool = GitTool()
+    assert tool.name == "git_tool"
+    assert tool.tier == "safe"
+    res = await tool.execute(action="status", repo_path=".")
+    assert res.success
+    res_log = await tool.execute(action="log", repo_path=".", args="-n 1")
+    assert res_log.success

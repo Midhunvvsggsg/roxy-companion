@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -107,6 +108,81 @@ class MemoryManager:
             created_at=now,
             updated_at=now,
         )
+
+    def get_preferred_name(self, character_id: str, user_id: str) -> Optional[str]:
+        """Retrieve user's stored preferred name overriding defaults."""
+        cursor = self.conn.execute(
+            """
+            SELECT value FROM facts
+            WHERE character_id = ? AND user_id = ? AND active = 1
+            AND (key IN ('preferred_name', 'user_name', 'name', 'nickname', 'call_me') OR (category = 'identity' AND key LIKE '%name%'))
+            ORDER BY id DESC LIMIT 1
+            """,
+            (character_id, user_id),
+        )
+        row = cursor.fetchone()
+        if row and row["value"]:
+            return row["value"].strip()
+        return None
+
+    def set_preferred_name(self, character_id: str, user_id: str, name: str) -> Fact:
+        """Store or update user's preferred name as a permanent identity fact."""
+        return self.upsert_fact(character_id, user_id, "identity", "preferred_name", name.strip(), confidence=1.0)
+
+    async def extract_facts_from_turn(
+        self,
+        character_id: str,
+        user_id: str,
+        user_message: str,
+        assistant_reply: str,
+        llm_provider: LLMProvider,
+    ) -> list[Fact]:
+        """Analyze a conversation turn to automatically extract persistent user facts, preferences, and projects."""
+        clean_msg = user_message.strip()
+        saved: list[Fact] = []
+
+        # Fast direct capture for preferred names (e.g. 'call me Midhun-san', 'my name is Opah')
+        m_name = re.search(r"\b(?:call me|my name is|please call me|you can call me|address me as)\s+([A-Za-z0-9_\-]+(?:\s+[A-Za-z0-9_\-]+)?)\b", clean_msg, re.IGNORECASE)
+        if m_name:
+            cand_name = m_name.group(1).strip()
+            if cand_name and cand_name.lower() not in ("what", "who", "why", "how", "please"):
+                f = self.set_preferred_name(character_id, user_id, cand_name)
+                saved.append(f)
+
+        if len(clean_msg) < 8 or clean_msg.lower() in ("hi", "hello", "hey", "goof", "yes", "no", "ok", "confirm"):
+            return saved
+
+        prompt = (
+            f"You are a memory analysis engine for companion assistant Roxy.\n"
+            f"Analyze this single conversation turn with user '{user_id}'.\n"
+            f"Identify if the user stated or directly implied any persistent facts, preferences, current projects, "
+            f"skills, habits, technical stacks, schedule/routines, or personal details about themselves.\n"
+            f"Do NOT extract temporary states (like 'user is sleepy today') or trivial chit-chat.\n"
+            f"Respond ONLY with a JSON array in this exact schema, or [] if no persistent facts are found:\n"
+            f'[\n  {{"category": "preference|project|identity|habit|tech_stack", "key": "short_snake_case_key", "value": "concise description"}}\n]\n\n'
+            f"User message: {user_message}\n"
+            f"Assistant response: {assistant_reply}"
+        )
+
+        try:
+            reply = await llm_provider.chat([LLMMessage(role="system", content=prompt)])
+            clean_reply = reply.strip()
+            if clean_reply.startswith("```"):
+                clean_reply = clean_reply.split("\n", 1)[-1]
+                if clean_reply.endswith("```"):
+                    clean_reply = clean_reply.rsplit("```", 1)[0]
+            items = json.loads(clean_reply.strip())
+            if isinstance(items, list):
+                for item in items:
+                    cat = item.get("category", "general")
+                    k = item.get("key", "").strip()
+                    v = item.get("value", "").strip()
+                    if k and v:
+                        f = self.upsert_fact(character_id, user_id, cat, k, v)
+                        saved.append(f)
+            return saved
+        except Exception:
+            return saved
 
     def get_facts(self, character_id: str, user_id: str, active_only: bool = True) -> list[Fact]:
         """Retrieve all long-term facts for a character-user pair."""
@@ -319,7 +395,12 @@ class MemoryManager:
         """Construct the memory context block to be injected into the system prompt."""
         sections = []
 
-        # 1. Facts
+        # 1. Preferred Name & Identity Guidance
+        pref_name = self.get_preferred_name(character_id, user_id)
+        if pref_name:
+            sections.append(f"User Preferred Name & Identity:\n- User's preferred name is '{pref_name}'. You MUST address the user exclusively and consistently as '{pref_name}'.")
+
+        # 2. Facts
         facts = self.get_facts(character_id, user_id, active_only=True)
         if facts:
             fact_lines = [f"- [{f.category}] {f.key}: {f.value}" for f in facts]

@@ -46,6 +46,19 @@ First character: **Roxy Migurdia** from *Mushoku Tensei* (serious, proud water s
 
 ---
 
+## 🔒 Voice Synthesis & Privacy Architecture
+
+Kokoro-Term features a strict dual-tier TTS Provider Interface (`tts.provider = local | edge`):
+- **`local` (Offline & Private Default)**: 100% private. Runs entirely on your local CPU with zero network traffic.
+- **`edge` (Optional Online Cloud)**: Uses Microsoft Edge Speech WebSocket service (`speech.platform.bing.com`) for low-latency streaming neural voices.
+- **Strict Privacy Guarantee**: Only Roxy's final conversational dialogue is sent to cloud TTS. System prompt instructions, tool outputs, terminal shell commands, file contents, memory databases, and screenshots are **strictly NEVER transmitted** to the cloud TTS.
+- **Automatic Fallback**: If Edge-TTS encounters network disconnection or rate limits, the system seamlessly falls back to the local provider without interrupting speech. The status is clearly indicated via `[Voice: cloud]` or `[Voice: local]`.
+
+> [!WARNING]
+> **Edge-TTS Endpoint Disclosure**: Edge-TTS connects to Microsoft's Bing Speech service via an unofficial, reverse-engineered client token and Edge browser extension origin. Microsoft can change, throttle, or deprecate this endpoint at any time.
+
+---
+
 ## 🚀 Quickstart & Installation
 
 ### Option A: Using `uv` (Recommended for Speed & Isolation)

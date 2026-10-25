@@ -729,7 +729,13 @@ class KokoroApp(App):
 
     def _prepare_system_prompt(self, current_user_query: str = "") -> str:
         """Build the complete system prompt including base personality, memory, relationship, and tools."""
-        base_prompt = self.character.build_system_prompt(user_name=self.user_id)
+        effective_name = self.user_id
+        if self.memory:
+            pref = self.memory.get_preferred_name(self.character.id, self.user_id)
+            if pref:
+                effective_name = pref
+
+        base_prompt = self.character.build_system_prompt(user_name=effective_name, preferred_name=effective_name)
         memory_context = ""
         if self.memory:
             memory_context = self.memory.build_context_injection(
@@ -1209,10 +1215,14 @@ class KokoroApp(App):
                 if not self.memory:
                     await chat_scroll.mount(ChatMessageWidget(sender="System", text="Memory is disabled.", is_user=False))
                 else:
+                    pref_name = self.memory.get_preferred_name(self.character.id, self.user_id) or self.user_id
                     facts = self.memory.get_facts(self.character.id, self.user_id, active_only=True)
                     episodes = self.memory.get_recent_episodes(self.character.id, self.user_id, limit=3)
 
-                    lines = ["[bold]🧠 Stored Memory:[/bold]"]
+                    lines = [f"[bold]🧠 Stored Memory for User: [bold cyan]{pref_name}[/bold cyan][/bold]"]
+                    if pref_name != self.user_id:
+                        lines.append(f"[dim]Preferred Name Fact: '{pref_name}' (Overrides default '{self.user_id}')[/dim]")
+
                     if facts:
                         lines.append("\n[bold cyan]Facts & Preferences:[/bold cyan]")
                         for f in facts:
@@ -1226,6 +1236,16 @@ class KokoroApp(App):
                             lines.append(f"  • [dim]{ep.created_at[:10]}:[/dim] {ep.summary}")
 
                     await chat_scroll.mount(ChatMessageWidget(sender="System", text="\n".join(lines), is_user=False))
+
+            elif sub_cmd == "name":
+                if len(parts) < 3:
+                    cur = self.memory.get_preferred_name(self.character.id, self.user_id) if self.memory else self.user_id
+                    await chat_scroll.mount(ChatMessageWidget(sender="System", text=f"Current preferred name: [bold cyan]{cur}[/bold cyan]\nUsage: /memory name <preferred_name>", is_user=False))
+                else:
+                    new_name = " ".join(parts[2:]).strip()
+                    if self.memory:
+                        self.memory.set_preferred_name(self.character.id, self.user_id, new_name)
+                    await chat_scroll.mount(ChatMessageWidget(sender="System", text=f"[bold green]✓ Preferred name updated to '{new_name}'. Roxy will address you as '{new_name}'.[/bold green]", is_user=False))
 
             elif sub_cmd == "forget":
                 if len(parts) < 3:
