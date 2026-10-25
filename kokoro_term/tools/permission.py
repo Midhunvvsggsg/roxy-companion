@@ -103,6 +103,7 @@ class PermissionManager:
             "check_app_running",
             "capture_screen",
             "inspect_screen",
+            "web_research",
         ):
             return "safe"
 
@@ -138,6 +139,7 @@ class PermissionManager:
             "check_app_running",
             "capture_screen",
             "inspect_screen",
+            "web_research",
         ):
             return False, ""
 

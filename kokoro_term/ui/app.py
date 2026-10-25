@@ -16,6 +16,7 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, Vertical, VerticalScroll
 from textual.reactive import reactive
+from textual.screen import ModalScreen
 from textual.widgets import Footer, Header, Input, Label, Static
 
 from rich.console import Group
@@ -100,6 +101,67 @@ class ChatMessageWidget(Static):
         else:
             self.classes = "chat-msg bot-msg"
             self.update(f"[bold magenta]{self.sender}:[/bold magenta]\n{self.text}")
+
+
+class ArticlePanelWidget(Static):
+    """Rich interactive panel displaying structured research results in the chat log."""
+
+    def __init__(self, article: Any, **kwargs):
+        super().__init__(**kwargs)
+        self.article = article
+
+    def on_mount(self) -> None:
+        self.classes = "chat-msg research-panel"
+        self.update_display()
+
+    def update_display(self) -> None:
+        art = self.article
+        if isinstance(art, dict):
+            headline = art.get("headline", "Web Research Report")
+            as_of = art.get("as_of", "")
+            lead = art.get("lead", "")
+            key_points = art.get("key_points", [])
+            sources = art.get("sources", [])
+        else:
+            headline = getattr(art, "headline", "Web Research Report")
+            as_of = getattr(art, "as_of", "")
+            lead = getattr(art, "lead", "")
+            key_points = getattr(art, "key_points", [])
+            sources = getattr(art, "sources", [])
+
+        pts_md = "\n".join([f"  • {p}" for p in key_points[:6]])
+        src_preview = f"{len(sources)} sources (run [bold cyan]/sources[/bold cyan] or [bold cyan]/open <n>[/bold cyan])"
+
+        text = (
+            f"[bold cyan]📰 {headline}[/bold cyan]\n"
+            f"[dim italic]As of {as_of}[/dim italic]\n\n"
+            f"[bold]Lead Summary:[/bold]\n{lead}\n\n"
+            f"[bold]Key Findings:[/bold]\n{pts_md}\n\n"
+            f"[dim]── Sources: {src_preview} | Press '/focus' for full card ──[/dim]"
+        )
+        self.rendered_text = text
+        self.update(text)
+
+
+class ArticleFocusScreen(ModalScreen):
+    """Centered scrollable modal card displaying full research article."""
+
+    BINDINGS = [
+        Binding("escape", "dismiss", "Close"),
+        Binding("q", "dismiss", "Close"),
+    ]
+
+    def __init__(self, article: Any, **kwargs):
+        super().__init__(**kwargs)
+        self.article = article
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="focus-card"):
+            yield Static("[bold cyan]═══════ Research Focus Card (Esc to close) ═══════[/bold cyan]\n")
+            with VerticalScroll(id="focus-scroll"):
+                md = self.article.markdown if hasattr(self.article, "markdown") else self.article.get("markdown", "")
+                yield Static(md)
+            yield Static("\n[dim]Commands: /open <n> | /save article | Press Esc to return to chat[/dim]")
 
 
 class AvatarPanel(Static):
@@ -404,6 +466,30 @@ class KokoroApp(App):
 
     .bot-msg {
         border-left: wide $primary;
+    }
+
+    .research-panel {
+        border-left: wide #00e5ff;
+        background: #0d1b2a;
+    }
+
+    ArticleFocusScreen {
+        align: center middle;
+        background: rgba(0, 0, 0, 0.75);
+    }
+
+    #focus-card {
+        width: 85%;
+        height: 85%;
+        border: heavy #00e5ff;
+        background: #05060d;
+        padding: 1 2;
+    }
+
+    #focus-scroll {
+        width: 100%;
+        height: 1fr;
+        overflow-y: auto;
     }
 
     #input-container {
@@ -764,6 +850,11 @@ class KokoroApp(App):
                 "- /memory forget <term/id>: Remove a fact from memory\n"
                 "- /memory export [file]: Save all memory to Markdown\n"
                 "- /memory wipe: Erase all memory for this character\n"
+                "- /news [topic]: Research latest news and render structured article panel\n"
+                "- /sources: View numbered sources from current research report\n"
+                "- /open <n>: Open research source #n or app in browser\n"
+                "- /save article [path]: Export current research article to Markdown\n"
+                "- /focus: Open full scrollable article card modal (Esc closes)\n"
                 "- /clear: Clear chat window\n"
                 "- /quit: Exit application"
             )
@@ -1174,8 +1265,78 @@ class KokoroApp(App):
                 else:
                     curr = getattr(self.agent_loop.permission, "dangerous_policy", "ask")
                     await chat_scroll.mount(ChatMessageWidget(sender="System", text=f"Dangerous actions policy: [bold]{curr.upper()}[/bold]. Usage: /perm <ask|allow|block>", is_user=False))
+        elif root_cmd == "/news":
+            topic = " ".join(parts[1:]).strip() if len(parts) > 1 else "top technology and world headlines"
+            await chat_scroll.mount(ChatMessageWidget(sender="System", text=f"🔍 Researching latest news on [bold]{topic}[/bold] across multiple sources...", is_user=False))
+            chat_scroll.scroll_end(animate=False)
+            from kokoro_term.tools.builtin.web_research import WebResearchTool, get_last_research_article
+            tool = WebResearchTool()
+            res = await tool.execute(query=topic, kind="news")
+            if res.success:
+                art = get_last_research_article()
+                if art:
+                    await chat_scroll.mount(ArticlePanelWidget(art))
+                    chat_scroll.scroll_end(animate=False)
             else:
-                await chat_scroll.mount(ChatMessageWidget(sender="System", text="Permissions manager not available.", is_user=False))
+                await chat_scroll.mount(ChatMessageWidget(sender="System", text=f"[red]News research failed: {res.error}[/red]", is_user=False))
+                chat_scroll.scroll_end(animate=False)
+
+        elif root_cmd == "/sources":
+            from kokoro_term.tools.builtin.web_research import get_last_research_article
+            art = get_last_research_article()
+            if not art or not art.sources:
+                await chat_scroll.mount(ChatMessageWidget(sender="System", text="No research sources found. Run /news [topic] or a research query first.", is_user=False))
+            else:
+                lines = [f"[bold]📚 Sources for '{art.headline}':[/bold]"]
+                for s in art.sources:
+                    lines.append(f"  • #{s.index} [bold cyan][{s.domain}][/bold cyan] {s.title} ({s.date})\n    [dim]{s.url}[/dim]")
+                lines.append("\n[dim]To open any source in your browser, run: /open <n> (e.g. /open 1)[/dim]")
+                await chat_scroll.mount(ChatMessageWidget(sender="System", text="\n".join(lines), is_user=False))
+            chat_scroll.scroll_end(animate=False)
+
+        elif root_cmd == "/open":
+            if len(parts) > 1 and parts[1].isdigit():
+                idx = int(parts[1])
+                from kokoro_term.tools.builtin.web_research import open_research_source
+                res = open_research_source(idx)
+                status = "[green]✓[/green]" if res.get("ok") else "[red]✗[/red]"
+                await chat_scroll.mount(ChatMessageWidget(sender="System", text=f"{status} {res.get('detail')}", is_user=False))
+            elif len(parts) > 1:
+                target = parts[1]
+                if target.startswith("http://") or target.startswith("https://"):
+                    from kokoro_term.tools.builtin.apps import OpenUrlTool
+                    tool = OpenUrlTool()
+                    r = await tool.execute(url=target)
+                else:
+                    from kokoro_term.tools.builtin.apps import OpenAppTool
+                    tool = OpenAppTool()
+                    r = await tool.execute(app_name=target)
+                await chat_scroll.mount(ChatMessageWidget(sender="System", text=r.output or r.error, is_user=False))
+            else:
+                await chat_scroll.mount(ChatMessageWidget(sender="System", text="Usage: /open <source_number|url|app_name> (e.g. /open 1)", is_user=False))
+            chat_scroll.scroll_end(animate=False)
+
+        elif root_cmd == "/save" and len(parts) > 1 and parts[1].lower() == "article":
+            from kokoro_term.tools.builtin.web_research import save_research_article, get_last_research_article
+            art = get_last_research_article()
+            if not art:
+                await chat_scroll.mount(ChatMessageWidget(sender="System", text="No research article loaded to save.", is_user=False))
+            else:
+                target_p = parts[2] if len(parts) > 2 else None
+                try:
+                    saved_path = save_research_article(art, target_p)
+                    await chat_scroll.mount(ChatMessageWidget(sender="System", text=f"[bold green]✓ Saved research article to:[/bold green] {saved_path}", is_user=False))
+                except Exception as e:
+                    await chat_scroll.mount(ChatMessageWidget(sender="System", text=f"[red]Failed to save article: {e}[/red]", is_user=False))
+            chat_scroll.scroll_end(animate=False)
+
+        elif root_cmd in ("/focus", "/read"):
+            from kokoro_term.tools.builtin.web_research import get_last_research_article
+            art = get_last_research_article()
+            if not art:
+                await chat_scroll.mount(ChatMessageWidget(sender="System", text="No research article loaded. Run /news [topic] or a research query first.", is_user=False))
+            else:
+                self.push_screen(ArticleFocusScreen(art))
 
         elif root_cmd == "/stop":
             await chat_scroll.mount(ChatMessageWidget(sender="System", text="Stopping agent execution...", is_user=False))
@@ -1380,6 +1541,11 @@ class KokoroApp(App):
                         out_summary = event.get("output", "").strip()[:300]
                         tool_notice = f"[dim]● {event['tool']} ({status_str}): {out_summary}[/dim]"
                         await chat_scroll.mount(ChatMessageWidget(sender="System", text=tool_notice, is_user=False))
+                        if event.get("tool") == "web_research" and event.get("success"):
+                            from kokoro_term.tools.builtin.web_research import get_last_research_article
+                            art = get_last_research_article()
+                            if art:
+                                await chat_scroll.mount(ArticlePanelWidget(art))
                         chat_scroll.scroll_end(animate=False)
 
                     elif etype == "confirm_required":

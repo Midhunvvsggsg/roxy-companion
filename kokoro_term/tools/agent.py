@@ -25,7 +25,7 @@ ACTION_WORDS = {
     "look", "see", "watch", "exec", "help", "pause", "resume", "louder", "quieter",
     "music", "song", "songs", "track", "tracks", "playing", "skip", "next", "prev",
     "previous", "listen", "hear", "stream", "tune", "tunes", "browse", "visit",
-    "news", "headlines", "weather", "sing", "put", "bring", "fire"
+    "news", "headlines", "weather", "sing", "put", "bring", "fire", "research", "latest", "what", "lookup"
 }
 
 APP_SITE_NAMES = {
@@ -153,7 +153,7 @@ class AgentLoop:
                 try:
                     args = json.loads(args)
                 except Exception:
-                    args = {"query": args} if name in ("music_play", "music_search", "youtube_play") else {"target": args}
+                    args = {"query": args} if name in ("music_play", "music_search", "youtube_play", "web_research") else {"target": args}
 
             if not isinstance(args, dict):
                 args = {}
@@ -261,7 +261,7 @@ class AgentLoop:
                     parsed_args[k] = v
                 if not parsed_args and args_str:
                     clean_pos = args_str.strip("\"'")
-                    if fn_name in ("music_play", "music_search", "youtube_play"):
+                    if fn_name in ("music_play", "music_search", "youtube_play", "web_research"):
                         parsed_args["query"] = clean_pos
                     elif fn_name in ("open_app", "check_app_running"):
                         parsed_args["app_name"] = clean_pos

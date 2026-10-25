@@ -18,19 +18,23 @@ class ToolResult(BaseModel):
     exit_code: Optional[int] = None
     stderr: str = ""
     detail: str = ""
+    data: Optional[dict[str, Any]] = None
 
     @property
     def ok(self) -> bool:
         return self.success
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        res = {
             "ok": self.success,
             "pid": self.pid,
             "exit_code": self.exit_code,
             "stderr": self.stderr or (self.error or ""),
             "detail": self.detail or self.output or (self.error or ""),
         }
+        if self.data is not None:
+            res["data"] = self.data
+        return res
 
     def format_for_llm(self) -> str:
         if not self.success:
