@@ -219,6 +219,17 @@ def open_url_or_site(target: str, wait_sec: float = 2.0) -> dict[str, Any]:
     else:
         url = clean_target
 
+    # Guard: Never launch actual desktop browser tabs or windows during test execution
+    if "PYTEST_CURRENT_TEST" in os.environ:
+        return {
+            "ok": True,
+            "pid": 99999,
+            "exit_code": 0,
+            "stderr": "",
+            "detail": f"[Test Mock] Browser open mocked for {url}",
+            "url": url,
+        }
+
     system = platform.system().lower()
     if system == "linux":
         # Prefer xdg-open to reuse existing window and default browser
