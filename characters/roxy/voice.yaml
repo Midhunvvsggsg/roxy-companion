@@ -1,100 +1,81 @@
-# TTS Provider Configuration
-# - 'edge': Online cloud provider (using Microsoft Edge Speech service)
-# - 'local': 100% private offline default (zero network bytes, zero data sent to external servers)
-# PRIVACY NOTICE:
-# Edge-TTS connects to an unofficial Microsoft Read Aloud endpoint (speech.platform.bing.com).
-# Only the final clean spoken text is sent. Tool outputs, file contents, memory databases,
-# and screenshots are strictly NEVER transmitted to the cloud.
-provider: "edge"
+provider: cloud
 fallback_to_local: true
-
-engine: "edge-tts"
-voice_id: "en-US-AvaNeural"
-preset: "mature_mommy_fast"
-speed: 1.15
-pitch: -4
-lang: "en-US"
-
-# Natural pause timings (milliseconds - natural human rhythm without clipping)
-pause_comma_ms: 100
-pause_sentence_ms: 250
+engine: edge-tts
+voice_id: en-US-AvaNeural
+preset: young_japanese_girl_energetic
+speed: 1.28
+pitch: 20
+lang: en-US
+pause_comma_ms: 75
+pause_sentence_ms: 160
 trim_silence: true
-
-# Per-emotion pace multipliers (relative to base speed 1.28x)
-# High energy, fast, spirited anime delivery
 emotion_pace:
-  neutral: 1.0       # 1.28x
-  teasing: 1.08      # ~1.38x
-  flustered: 1.12    # ~1.43x
-  blush: 1.08        # ~1.38x
-  shy: 0.98          # ~1.25x
-  serious: 1.02      # ~1.31x
-  commanding: 1.04   # ~1.33x
-  angry: 1.06        # ~1.36x
-  caring: 0.98       # ~1.25x
-  gentle: 0.98       # ~1.25x
-  happy: 1.08        # ~1.38x
-  smile: 1.06        # ~1.36x
-  surprise: 1.10     # ~1.41x
-
-# Emotion pitch adjustments (Hz offset relative to base_pitch +20Hz)
-# ja-JP-NanamiNeural: youthful, vibrant anime girl register (~305-325Hz)
+  neutral: 1.0
+  teasing: 1.08
+  flustered: 1.12
+  blush: 1.08
+  shy: 0.98
+  serious: 1.02
+  commanding: 1.04
+  angry: 1.06
+  caring: 0.98
+  gentle: 0.98
+  happy: 1.08
+  smile: 1.06
+  surprise: 1.1
 emotion_pitch:
-  neutral: 0         # +20Hz base (bright, youthful)
-  teasing: 6         # +26Hz playful
-  flustered: 10      # +30Hz cute high-pitched fluster
-  blush: 8           # +28Hz
-  shy: 3             # +23Hz
-  serious: -2        # +18Hz focused, earnest
-  commanding: -1     # +19Hz
-  angry: 5           # +25Hz pouting tsundere
-  caring: 2          # +22Hz sweet affection
-  gentle: 2          # +22Hz
-  happy: 8           # +28Hz cheerful and lively
-  smile: 5           # +25Hz
-  surprise: 12       # +32Hz animated surprise
-
-# Japanese-style slang styling
+  neutral: 0
+  teasing: 6
+  flustered: 10
+  blush: 8
+  shy: 3
+  serious: -2
+  commanding: -1
+  angry: 5
+  caring: 2
+  gentle: 2
+  happy: 8
+  smile: 5
+  surprise: 12
 speech_style:
-  accent: "soft_jp"
+  accent: soft_jp
   accent_strength: 0.3
   stutter_on_blush: true
   slang_words:
-    - "ara"
-    - "fufu"
-    - "mou"
-    - "ne"
-    - "yosh"
-    - "hora"
-    - "sugoi"
-    - "baka"
-    - "yare yare"
-    - "ganbatte"
-    - "-san"
-    - "-kun"
-
-# Pronunciation map for en-US-AvaNeural to ensure accurate Japanese loanword phonetics.
+  - ara
+  - fufu
+  - mou
+  - ne
+  - yosh
+  - hora
+  - sugoi
+  - baka
+  - yare yare
+  - ganbatte
+  - -san
+  - -kun
 pronunciation_map:
-  ara: "ah-rah"
-  Ara: "Ah-rah"
-  fufu: "foo-foo"
-  Fufu: "Foo-foo"
-  mou: "mow"
-  Mou: "Mow"
-  ne: "neh"
-  yosh: "yohsh"
-  Yosh: "Yohsh"
-  hora: "hoh-rah"
-  Hora: "Hoh-rah"
-  sugoi: "soo-goy"
-  Sugoi: "Soo-goy"
-  baka: "bah-kah"
-  Baka: "Bah-kah"
-  yare yare: "yah-reh yah-reh"
-  Yare yare: "Yah-reh yah-reh"
-  ganbatte: "gahn-baht-teh"
-  Ganbatte: "Gahn-baht-teh"
-  "-san": "-sahn"
-  "-kun": "-koon"
-  Opppah: "Oh-pah"
-  opppah: "oh-pah"
+  ara: ah-rah
+  Ara: Ah-rah
+  fufu: foo-foo
+  Fufu: Foo-foo
+  mou: mow
+  Mou: Mow
+  ne: neh
+  yosh: yohsh
+  Yosh: Yohsh
+  hora: hoh-rah
+  Hora: Hoh-rah
+  sugoi: soo-goy
+  Sugoi: Soo-goy
+  baka: bah-kah
+  Baka: Bah-kah
+  yare yare: yah-reh yah-reh
+  Yare yare: Yah-reh yah-reh
+  ganbatte: gahn-baht-teh
+  Ganbatte: Gahn-baht-teh
+  -san: -sahn
+  -kun: -koon
+  Opppah: Oh-pah
+  opppah: oh-pah
+lipsync_offset_ms: 0.0

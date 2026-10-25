@@ -12,12 +12,12 @@
         "duration_sec": 3.74,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.63,
-        "dc_offset": 3e-05,
-        "zcr": 0.2259,
+        "dc_offset": 3.2e-05,
+        "zcr": 0.2248,
         "energy_above_6k": 0.0005,
         "spectral_flatness": 0.001609,
         "clicks_at_joins": 0.0,
-        "f0_variance": 3067.05
+        "f0_variance": 3063.28
       },
       "stage2_metrics": {
         "sample_rate": 24000,
@@ -25,12 +25,12 @@
         "duration_sec": 1.92,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.63,
-        "dc_offset": 9.1e-05,
-        "zcr": 0.1245,
+        "dc_offset": 9.4e-05,
+        "zcr": 0.1235,
         "energy_above_6k": 0.0006,
         "spectral_flatness": 0.00426,
         "clicks_at_joins": 0.0,
-        "f0_variance": 3051.28
+        "f0_variance": 3042.5
       },
       "stage3_metrics": {
         "sample_rate": 24000,
@@ -38,12 +38,12 @@
         "duration_sec": 1.92,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.63,
-        "dc_offset": 9.1e-05,
-        "zcr": 0.1245,
+        "dc_offset": 9.4e-05,
+        "zcr": 0.1235,
         "energy_above_6k": 0.0006,
         "spectral_flatness": 0.00426,
         "clicks_at_joins": 0.0,
-        "f0_variance": 3051.28
+        "f0_variance": 3042.5
       },
       "stage4_metrics": {
         "sample_rate": 24000,
@@ -51,12 +51,12 @@
         "duration_sec": 1.92,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.63,
-        "dc_offset": 9.1e-05,
-        "zcr": 0.1245,
+        "dc_offset": 9.4e-05,
+        "zcr": 0.1235,
         "energy_above_6k": 0.0006,
         "spectral_flatness": 0.00426,
         "clicks_at_joins": 0.0003,
-        "f0_variance": 3051.28
+        "f0_variance": 3042.5
       },
       "stage5_metrics": {
         "sample_rate": 24000,
@@ -64,12 +64,12 @@
         "duration_sec": 1.92,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.63,
-        "dc_offset": 9.1e-05,
-        "zcr": 0.1245,
+        "dc_offset": 9.4e-05,
+        "zcr": 0.1235,
         "energy_above_6k": 0.0006,
         "spectral_flatness": 0.00426,
         "clicks_at_joins": 0.0003,
-        "f0_variance": 3051.28
+        "f0_variance": 3042.5
       },
       "whisper_transcript": "Hello, Midan. It's good to see you back at the terminal.",
       "wer": 0.0909
@@ -86,12 +86,12 @@
         "duration_sec": 21.5,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.45,
-        "dc_offset": 4.3e-05,
-        "zcr": 0.146,
+        "dc_offset": 4.1e-05,
+        "zcr": 0.1461,
         "energy_above_6k": 0.0004,
         "spectral_flatness": 0.001119,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1707.29
+        "f0_variance": 1708.62
       },
       "stage2_metrics": {
         "sample_rate": 24000,
@@ -99,12 +99,12 @@
         "duration_sec": 18.67,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.45,
-        "dc_offset": 6e-05,
-        "zcr": 0.1406,
+        "dc_offset": 5.7e-05,
+        "zcr": 0.1402,
         "energy_above_6k": 0.0002,
         "spectral_flatness": 0.002205,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1731.85
+        "f0_variance": 1730.18
       },
       "stage3_metrics": {
         "sample_rate": 24000,
@@ -112,12 +112,12 @@
         "duration_sec": 18.67,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.45,
-        "dc_offset": 6e-05,
-        "zcr": 0.1406,
+        "dc_offset": 5.7e-05,
+        "zcr": 0.1402,
         "energy_above_6k": 0.0002,
         "spectral_flatness": 0.002205,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1731.85
+        "f0_variance": 1730.18
       },
       "stage4_metrics": {
         "sample_rate": 24000,
@@ -125,12 +125,12 @@
         "duration_sec": 18.67,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.45,
-        "dc_offset": 6e-05,
-        "zcr": 0.1406,
+        "dc_offset": 5.7e-05,
+        "zcr": 0.1402,
         "energy_above_6k": 0.0002,
         "spectral_flatness": 0.002205,
-        "clicks_at_joins": 0.0045,
-        "f0_variance": 1731.85
+        "clicks_at_joins": 0.0037,
+        "f0_variance": 1730.18
       },
       "stage5_metrics": {
         "sample_rate": 24000,
@@ -138,14 +138,14 @@
         "duration_sec": 18.67,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.45,
-        "dc_offset": 6e-05,
-        "zcr": 0.1406,
+        "dc_offset": 5.7e-05,
+        "zcr": 0.1402,
         "energy_above_6k": 0.0002,
         "spectral_flatness": 0.002205,
-        "clicks_at_joins": 0.0045,
-        "f0_variance": 1731.85
+        "clicks_at_joins": 0.0037,
+        "f0_variance": 1730.18
       },
-      "whisper_transcript": "OS, Linux 7.1.3, Arch 1-3, X86, Underscore 64, CPUs, 12 Python, March 12, 13 memory, MEM total, 1606, 5292 KB, MEM free, 1159, 9592 KB, MEM available, 1289, 3164 KB.",
+      "whisper_transcript": "OS, Linux 7.1.3, Arch 1-3, X86, underscore 64, CPUs, 12 Python, March 12, 13 memory, MEM total, 1606, 5292 KB, MEM free, 1159, 9592 KB, MEM available, 1289, 3164 KB.",
       "wer": 1.1667
     },
     {
@@ -159,65 +159,65 @@
         "channels": 1,
         "duration_sec": 7.22,
         "clipping_ratio": 0.0,
-        "peak_dbfs": -4.51,
-        "dc_offset": 6.9e-05,
-        "zcr": 0.1792,
+        "peak_dbfs": -4.46,
+        "dc_offset": 7.7e-05,
+        "zcr": 0.179,
         "energy_above_6k": 0.0003,
         "spectral_flatness": 0.001151,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1447.99
+        "f0_variance": 1459.33
       },
       "stage2_metrics": {
         "sample_rate": 24000,
         "channels": 1,
         "duration_sec": 5.75,
         "clipping_ratio": 0.0,
-        "peak_dbfs": -4.51,
-        "dc_offset": 0.000108,
-        "zcr": 0.1835,
+        "peak_dbfs": -4.46,
+        "dc_offset": 0.000117,
+        "zcr": 0.1833,
         "energy_above_6k": 0.069,
         "spectral_flatness": 0.036866,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1429.34
+        "f0_variance": 1431.29
       },
       "stage3_metrics": {
         "sample_rate": 24000,
         "channels": 1,
         "duration_sec": 5.75,
         "clipping_ratio": 0.0,
-        "peak_dbfs": -4.51,
-        "dc_offset": 0.000108,
-        "zcr": 0.1835,
+        "peak_dbfs": -4.46,
+        "dc_offset": 0.000117,
+        "zcr": 0.1833,
         "energy_above_6k": 0.069,
         "spectral_flatness": 0.036866,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1429.34
+        "f0_variance": 1431.29
       },
       "stage4_metrics": {
         "sample_rate": 24000,
         "channels": 1,
         "duration_sec": 5.75,
         "clipping_ratio": 0.0,
-        "peak_dbfs": -4.51,
-        "dc_offset": 0.000108,
-        "zcr": 0.1835,
+        "peak_dbfs": -4.46,
+        "dc_offset": 0.000117,
+        "zcr": 0.1833,
         "energy_above_6k": 0.069,
         "spectral_flatness": 0.036866,
         "clicks_at_joins": 0.0058,
-        "f0_variance": 1429.34
+        "f0_variance": 1431.29
       },
       "stage5_metrics": {
         "sample_rate": 24000,
         "channels": 1,
         "duration_sec": 5.75,
         "clipping_ratio": 0.0,
-        "peak_dbfs": -4.51,
-        "dc_offset": 0.000108,
-        "zcr": 0.1835,
+        "peak_dbfs": -4.46,
+        "dc_offset": 0.000117,
+        "zcr": 0.1833,
         "energy_above_6k": 0.069,
         "spectral_flatness": 0.036866,
         "clicks_at_joins": 0.0058,
-        "f0_variance": 1429.34
+        "f0_variance": 1431.29
       },
       "whisper_transcript": "The system memory is 12GB, that's roughly 12,893MB, available for our processes.",
       "wer": 0.3333
@@ -234,12 +234,12 @@
         "duration_sec": 4.03,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.0,
-        "dc_offset": 1.2e-05,
-        "zcr": 0.1038,
+        "dc_offset": 2.2e-05,
+        "zcr": 0.1031,
         "energy_above_6k": 0.0006,
         "spectral_flatness": 0.001531,
         "clicks_at_joins": 0.0,
-        "f0_variance": 2561.22
+        "f0_variance": 2558.17
       },
       "stage2_metrics": {
         "sample_rate": 24000,
@@ -247,12 +247,12 @@
         "duration_sec": 3.09,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.0,
-        "dc_offset": 1.7e-05,
-        "zcr": 0.1062,
+        "dc_offset": 2.9e-05,
+        "zcr": 0.1058,
         "energy_above_6k": 0.0017,
         "spectral_flatness": 0.006327,
         "clicks_at_joins": 0.0,
-        "f0_variance": 2482.78
+        "f0_variance": 2478.64
       },
       "stage3_metrics": {
         "sample_rate": 24000,
@@ -260,12 +260,12 @@
         "duration_sec": 3.09,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.0,
-        "dc_offset": 1.7e-05,
-        "zcr": 0.1062,
+        "dc_offset": 2.9e-05,
+        "zcr": 0.1058,
         "energy_above_6k": 0.0017,
         "spectral_flatness": 0.006327,
         "clicks_at_joins": 0.0,
-        "f0_variance": 2482.78
+        "f0_variance": 2478.64
       },
       "stage4_metrics": {
         "sample_rate": 24000,
@@ -273,12 +273,12 @@
         "duration_sec": 3.09,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.0,
-        "dc_offset": 1.7e-05,
-        "zcr": 0.1062,
+        "dc_offset": 2.9e-05,
+        "zcr": 0.1058,
         "energy_above_6k": 0.0017,
         "spectral_flatness": 0.006327,
         "clicks_at_joins": 0.0005,
-        "f0_variance": 2482.78
+        "f0_variance": 2478.64
       },
       "stage5_metrics": {
         "sample_rate": 24000,
@@ -286,12 +286,12 @@
         "duration_sec": 3.09,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.0,
-        "dc_offset": 1.7e-05,
-        "zcr": 0.1062,
+        "dc_offset": 2.9e-05,
+        "zcr": 0.1058,
         "energy_above_6k": 0.0017,
         "spectral_flatness": 0.006327,
         "clicks_at_joins": 0.0005,
-        "f0_variance": 2482.78
+        "f0_variance": 2478.64
       },
       "whisper_transcript": "I can't believe it's already evening, but we haven't finished what we planned.",
       "wer": 0.0769
@@ -307,65 +307,65 @@
         "channels": 1,
         "duration_sec": 4.54,
         "clipping_ratio": 0.0,
-        "peak_dbfs": -4.07,
-        "dc_offset": 2.5e-05,
-        "zcr": 0.1053,
+        "peak_dbfs": -4.01,
+        "dc_offset": 2.6e-05,
+        "zcr": 0.1047,
         "energy_above_6k": 0.0004,
         "spectral_flatness": 0.001147,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1927.59
+        "f0_variance": 1919.76
       },
       "stage2_metrics": {
         "sample_rate": 24000,
         "channels": 1,
         "duration_sec": 3.61,
         "clipping_ratio": 0.0,
-        "peak_dbfs": -4.07,
-        "dc_offset": 4.7e-05,
-        "zcr": 0.1064,
+        "peak_dbfs": -4.01,
+        "dc_offset": 4.8e-05,
+        "zcr": 0.1055,
         "energy_above_6k": 0.0001,
         "spectral_flatness": 0.000929,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1991.22
+        "f0_variance": 1971.4
       },
       "stage3_metrics": {
         "sample_rate": 24000,
         "channels": 1,
         "duration_sec": 3.61,
         "clipping_ratio": 0.0,
-        "peak_dbfs": -4.07,
-        "dc_offset": 4.7e-05,
-        "zcr": 0.1064,
+        "peak_dbfs": -4.01,
+        "dc_offset": 4.8e-05,
+        "zcr": 0.1055,
         "energy_above_6k": 0.0001,
         "spectral_flatness": 0.000929,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1991.22
+        "f0_variance": 1971.4
       },
       "stage4_metrics": {
         "sample_rate": 24000,
         "channels": 1,
         "duration_sec": 3.61,
         "clipping_ratio": 0.0,
-        "peak_dbfs": -4.07,
-        "dc_offset": 4.7e-05,
-        "zcr": 0.1064,
+        "peak_dbfs": -4.01,
+        "dc_offset": 4.8e-05,
+        "zcr": 0.1055,
         "energy_above_6k": 0.0001,
         "spectral_flatness": 0.000929,
-        "clicks_at_joins": 0.0053,
-        "f0_variance": 1991.22
+        "clicks_at_joins": 0.006,
+        "f0_variance": 1971.4
       },
       "stage5_metrics": {
         "sample_rate": 24000,
         "channels": 1,
         "duration_sec": 3.61,
         "clipping_ratio": 0.0,
-        "peak_dbfs": -4.07,
-        "dc_offset": 4.7e-05,
-        "zcr": 0.1064,
+        "peak_dbfs": -4.01,
+        "dc_offset": 4.8e-05,
+        "zcr": 0.1055,
         "energy_above_6k": 0.0001,
         "spectral_flatness": 0.000929,
-        "clicks_at_joins": 0.0053,
-        "f0_variance": 1991.22
+        "clicks_at_joins": 0.006,
+        "f0_variance": 1971.4
       },
       "whisper_transcript": "Era, are you struggling with that little script? Fufu, maybe you need my guidance after all.",
       "wer": 0.0625
@@ -382,12 +382,12 @@
         "duration_sec": 5.64,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.38,
-        "dc_offset": 6.4e-05,
-        "zcr": 0.2164,
+        "dc_offset": 6.3e-05,
+        "zcr": 0.2167,
         "energy_above_6k": 0.0005,
         "spectral_flatness": 0.001438,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1505.0
+        "f0_variance": 1506.31
       },
       "stage2_metrics": {
         "sample_rate": 24000,
@@ -395,12 +395,12 @@
         "duration_sec": 3.66,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.38,
-        "dc_offset": 0.000127,
-        "zcr": 0.1738,
+        "dc_offset": 0.000125,
+        "zcr": 0.174,
         "energy_above_6k": 0.015,
         "spectral_flatness": 0.028133,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1630.38
+        "f0_variance": 1566.74
       },
       "stage3_metrics": {
         "sample_rate": 24000,
@@ -408,12 +408,12 @@
         "duration_sec": 3.66,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.38,
-        "dc_offset": 0.000127,
-        "zcr": 0.1738,
+        "dc_offset": 0.000125,
+        "zcr": 0.174,
         "energy_above_6k": 0.015,
         "spectral_flatness": 0.028133,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1630.38
+        "f0_variance": 1566.74
       },
       "stage4_metrics": {
         "sample_rate": 24000,
@@ -421,12 +421,12 @@
         "duration_sec": 3.66,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.38,
-        "dc_offset": 0.000127,
-        "zcr": 0.1738,
+        "dc_offset": 0.000125,
+        "zcr": 0.174,
         "energy_above_6k": 0.015,
         "spectral_flatness": 0.028133,
         "clicks_at_joins": 0.0059,
-        "f0_variance": 1630.38
+        "f0_variance": 1566.74
       },
       "stage5_metrics": {
         "sample_rate": 24000,
@@ -434,12 +434,12 @@
         "duration_sec": 3.66,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.38,
-        "dc_offset": 0.000127,
-        "zcr": 0.1738,
+        "dc_offset": 0.000125,
+        "zcr": 0.174,
         "energy_above_6k": 0.015,
         "spectral_flatness": 0.028133,
         "clicks_at_joins": 0.0059,
-        "f0_variance": 1630.38
+        "f0_variance": 1566.74
       },
       "whisper_transcript": "Stop procrastinating right now, focus on your work, and do not make silly mistakes.",
       "wer": 0.0
@@ -456,12 +456,12 @@
         "duration_sec": 10.7,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.26,
-        "dc_offset": 1.3e-05,
-        "zcr": 0.1357,
+        "dc_offset": 1.6e-05,
+        "zcr": 0.1356,
         "energy_above_6k": 0.0004,
         "spectral_flatness": 0.0013,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1915.68
+        "f0_variance": 1909.15
       },
       "stage2_metrics": {
         "sample_rate": 24000,
@@ -469,12 +469,12 @@
         "duration_sec": 9.39,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.26,
-        "dc_offset": 3e-05,
+        "dc_offset": 3.4e-05,
         "zcr": 0.1436,
         "energy_above_6k": 0.0006,
         "spectral_flatness": 0.002221,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1870.72
+        "f0_variance": 1870.56
       },
       "stage3_metrics": {
         "sample_rate": 24000,
@@ -482,12 +482,12 @@
         "duration_sec": 9.39,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.26,
-        "dc_offset": 3e-05,
+        "dc_offset": 3.4e-05,
         "zcr": 0.1436,
         "energy_above_6k": 0.0006,
         "spectral_flatness": 0.002221,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1870.72
+        "f0_variance": 1870.56
       },
       "stage4_metrics": {
         "sample_rate": 24000,
@@ -495,12 +495,12 @@
         "duration_sec": 9.39,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.26,
-        "dc_offset": 3e-05,
+        "dc_offset": 3.4e-05,
         "zcr": 0.1436,
         "energy_above_6k": 0.0006,
         "spectral_flatness": 0.002221,
         "clicks_at_joins": 0.0013,
-        "f0_variance": 1870.72
+        "f0_variance": 1870.56
       },
       "stage5_metrics": {
         "sample_rate": 24000,
@@ -508,12 +508,12 @@
         "duration_sec": 9.39,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.26,
-        "dc_offset": 3e-05,
+        "dc_offset": 3.4e-05,
         "zcr": 0.1436,
         "energy_above_6k": 0.0006,
         "spectral_flatness": 0.002221,
         "clicks_at_joins": 0.0013,
-        "f0_variance": 1870.72
+        "f0_variance": 1870.56
       },
       "whisper_transcript": "I've analyzed the entire log stream and discovered the underlying socket timeout error. Everything is currently operating within normal temperature limits now. Let's proceed to the next verification step without delay.",
       "wer": 0.0
@@ -530,12 +530,12 @@
         "duration_sec": 6.67,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.12,
-        "dc_offset": 6.1e-05,
-        "zcr": 0.1792,
+        "dc_offset": 5.7e-05,
+        "zcr": 0.179,
         "energy_above_6k": 0.0004,
         "spectral_flatness": 0.001317,
         "clicks_at_joins": 0.0,
-        "f0_variance": 2142.01
+        "f0_variance": 2144.32
       },
       "stage2_metrics": {
         "sample_rate": 24000,
@@ -543,12 +543,12 @@
         "duration_sec": 6.23,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.12,
-        "dc_offset": 7e-05,
-        "zcr": 0.1855,
+        "dc_offset": 6.6e-05,
+        "zcr": 0.1852,
         "energy_above_6k": 0.0054,
         "spectral_flatness": 0.00748,
         "clicks_at_joins": 0.0,
-        "f0_variance": 2169.98
+        "f0_variance": 2170.38
       },
       "stage3_metrics": {
         "sample_rate": 24000,
@@ -556,12 +556,12 @@
         "duration_sec": 6.23,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.12,
-        "dc_offset": 7e-05,
-        "zcr": 0.1855,
+        "dc_offset": 6.6e-05,
+        "zcr": 0.1852,
         "energy_above_6k": 0.0054,
         "spectral_flatness": 0.00748,
         "clicks_at_joins": 0.0,
-        "f0_variance": 2169.98
+        "f0_variance": 2170.38
       },
       "stage4_metrics": {
         "sample_rate": 24000,
@@ -569,12 +569,12 @@
         "duration_sec": 6.23,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.12,
-        "dc_offset": 7e-05,
-        "zcr": 0.1855,
+        "dc_offset": 6.6e-05,
+        "zcr": 0.1852,
         "energy_above_6k": 0.0054,
         "spectral_flatness": 0.00748,
         "clicks_at_joins": 0.0,
-        "f0_variance": 2169.98
+        "f0_variance": 2170.38
       },
       "stage5_metrics": {
         "sample_rate": 24000,
@@ -582,12 +582,12 @@
         "duration_sec": 6.23,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.12,
-        "dc_offset": 7e-05,
-        "zcr": 0.1855,
+        "dc_offset": 6.6e-05,
+        "zcr": 0.1852,
         "energy_above_6k": 0.0054,
         "spectral_flatness": 0.00748,
         "clicks_at_joins": 0.0,
-        "f0_variance": 2169.98
+        "f0_variance": 2170.38
       },
       "whisper_transcript": "The disk usage is currently at 57.4% with 16GB RAM and 4.2GHz clock speed.",
       "wer": 0.25
@@ -603,65 +603,65 @@
         "channels": 1,
         "duration_sec": 10.92,
         "clipping_ratio": 0.0,
-        "peak_dbfs": -3.75,
-        "dc_offset": 9.6e-05,
-        "zcr": 0.1839,
+        "peak_dbfs": -3.73,
+        "dc_offset": 9.4e-05,
+        "zcr": 0.1848,
         "energy_above_6k": 0.0005,
         "spectral_flatness": 0.001499,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1368.18
+        "f0_variance": 1366.55
       },
       "stage2_metrics": {
         "sample_rate": 24000,
         "channels": 1,
         "duration_sec": 10.01,
         "clipping_ratio": 0.0,
-        "peak_dbfs": -3.75,
-        "dc_offset": 0.000111,
-        "zcr": 0.1921,
+        "peak_dbfs": -3.73,
+        "dc_offset": 0.000109,
+        "zcr": 0.1931,
         "energy_above_6k": 0.007,
         "spectral_flatness": 0.009457,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1329.76
+        "f0_variance": 1332.52
       },
       "stage3_metrics": {
         "sample_rate": 24000,
         "channels": 1,
         "duration_sec": 10.01,
         "clipping_ratio": 0.0,
-        "peak_dbfs": -3.75,
-        "dc_offset": 0.000111,
-        "zcr": 0.1921,
+        "peak_dbfs": -3.73,
+        "dc_offset": 0.000109,
+        "zcr": 0.1931,
         "energy_above_6k": 0.007,
         "spectral_flatness": 0.009457,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1329.76
+        "f0_variance": 1332.52
       },
       "stage4_metrics": {
         "sample_rate": 24000,
         "channels": 1,
         "duration_sec": 10.01,
         "clipping_ratio": 0.0,
-        "peak_dbfs": -3.75,
-        "dc_offset": 0.000111,
-        "zcr": 0.1921,
+        "peak_dbfs": -3.73,
+        "dc_offset": 0.000109,
+        "zcr": 0.1931,
         "energy_above_6k": 0.007,
         "spectral_flatness": 0.009457,
         "clicks_at_joins": 0.0056,
-        "f0_variance": 1329.76
+        "f0_variance": 1332.52
       },
       "stage5_metrics": {
         "sample_rate": 24000,
         "channels": 1,
         "duration_sec": 10.01,
         "clipping_ratio": 0.0,
-        "peak_dbfs": -3.75,
-        "dc_offset": 0.000111,
-        "zcr": 0.1921,
+        "peak_dbfs": -3.73,
+        "dc_offset": 0.000109,
+        "zcr": 0.1931,
         "energy_above_6k": 0.007,
         "spectral_flatness": 0.009457,
         "clicks_at_joins": 0.0056,
-        "f0_variance": 1329.76
+        "f0_variance": 1332.52
       },
       "whisper_transcript": "Check the status at HTTPS forward slash forward slash local host 8080 or inspect slash home slash mid-hunt slash co-corro term slash data slash audit.log and nano.",
       "wer": 2.0
@@ -678,12 +678,12 @@
         "duration_sec": 5.06,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.54,
-        "dc_offset": 4.8e-05,
-        "zcr": 0.1801,
+        "dc_offset": 5.3e-05,
+        "zcr": 0.18,
         "energy_above_6k": 0.0002,
         "spectral_flatness": 0.000664,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1389.45
+        "f0_variance": 1386.41
       },
       "stage2_metrics": {
         "sample_rate": 24000,
@@ -691,12 +691,12 @@
         "duration_sec": 3.86,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.54,
-        "dc_offset": 8.5e-05,
-        "zcr": 0.1699,
+        "dc_offset": 9.1e-05,
+        "zcr": 0.1697,
         "energy_above_6k": 0.0002,
         "spectral_flatness": 0.002453,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1369.36
+        "f0_variance": 1369.6
       },
       "stage3_metrics": {
         "sample_rate": 24000,
@@ -704,12 +704,12 @@
         "duration_sec": 3.86,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.54,
-        "dc_offset": 8.5e-05,
-        "zcr": 0.1699,
+        "dc_offset": 9.1e-05,
+        "zcr": 0.1697,
         "energy_above_6k": 0.0002,
         "spectral_flatness": 0.002453,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1369.36
+        "f0_variance": 1369.6
       },
       "stage4_metrics": {
         "sample_rate": 24000,
@@ -717,12 +717,12 @@
         "duration_sec": 3.86,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.54,
-        "dc_offset": 8.5e-05,
-        "zcr": 0.1699,
+        "dc_offset": 9.1e-05,
+        "zcr": 0.1697,
         "energy_above_6k": 0.0002,
         "spectral_flatness": 0.002453,
         "clicks_at_joins": 0.0006,
-        "f0_variance": 1369.36
+        "f0_variance": 1369.6
       },
       "stage5_metrics": {
         "sample_rate": 24000,
@@ -730,15 +730,15 @@
         "duration_sec": 3.86,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.54,
-        "dc_offset": 8.5e-05,
-        "zcr": 0.1699,
+        "dc_offset": 9.1e-05,
+        "zcr": 0.1697,
         "energy_above_6k": 0.0002,
         "spectral_flatness": 0.002453,
         "clicks_at_joins": 0.0006,
-        "f0_variance": 1369.36
+        "f0_variance": 1369.6
       },
-      "whisper_transcript": "stand out, mid-hun-san. Yash, our preparations are complete so let's do our best.",
-      "wer": 0.25
+      "whisper_transcript": "stand out, mid-hunts and yosh our preparations are complete. So let's do our best.",
+      "wer": 0.3333
     }
   ],
   "after": [
@@ -753,67 +753,67 @@
         "channels": 1,
         "duration_sec": 3.77,
         "clipping_ratio": 0.0,
-        "peak_dbfs": -3.55,
-        "dc_offset": 1.6e-05,
-        "zcr": 0.2,
+        "peak_dbfs": -3.59,
+        "dc_offset": 3e-05,
+        "zcr": 0.1973,
         "energy_above_6k": 0.0011,
         "spectral_flatness": 0.002167,
         "clicks_at_joins": 0.0,
-        "f0_variance": 2614.61
+        "f0_variance": 2617.26
       },
       "stage2_metrics": {
         "sample_rate": 24000,
         "channels": 1,
         "duration_sec": 3.18,
         "clipping_ratio": 0.0,
-        "peak_dbfs": -3.55,
-        "dc_offset": 2e-05,
-        "zcr": 0.1072,
+        "peak_dbfs": -3.59,
+        "dc_offset": 3.6e-05,
+        "zcr": 0.1063,
         "energy_above_6k": 0.0047,
         "spectral_flatness": 0.029779,
         "clicks_at_joins": 0.0,
-        "f0_variance": 2620.32
+        "f0_variance": 2623.96
       },
       "stage3_metrics": {
         "sample_rate": 24000,
         "channels": 1,
         "duration_sec": 3.18,
         "clipping_ratio": 0.0,
-        "peak_dbfs": -3.55,
-        "dc_offset": 2e-05,
-        "zcr": 0.1072,
+        "peak_dbfs": -3.59,
+        "dc_offset": 3.6e-05,
+        "zcr": 0.1063,
         "energy_above_6k": 0.0047,
         "spectral_flatness": 0.029779,
         "clicks_at_joins": 0.0,
-        "f0_variance": 2620.32
+        "f0_variance": 2623.96
       },
       "stage4_metrics": {
         "sample_rate": 24000,
         "channels": 1,
         "duration_sec": 3.17,
         "clipping_ratio": 0.0,
-        "peak_dbfs": -3.55,
-        "dc_offset": 2e-05,
-        "zcr": 0.1075,
+        "peak_dbfs": -3.59,
+        "dc_offset": 3.6e-05,
+        "zcr": 0.1065,
         "energy_above_6k": 0.0047,
         "spectral_flatness": 0.029779,
         "clicks_at_joins": 0.0,
-        "f0_variance": 2595.68
+        "f0_variance": 2608.11
       },
       "stage5_metrics": {
         "sample_rate": 24000,
         "channels": 1,
         "duration_sec": 3.17,
         "clipping_ratio": 0.0,
-        "peak_dbfs": -3.55,
-        "dc_offset": 2e-05,
-        "zcr": 0.1075,
+        "peak_dbfs": -3.59,
+        "dc_offset": 3.6e-05,
+        "zcr": 0.1065,
         "energy_above_6k": 0.0047,
         "spectral_flatness": 0.029779,
         "clicks_at_joins": 0.0,
-        "f0_variance": 2595.68
+        "f0_variance": 2608.11
       },
-      "whisper_transcript": "Hello Midun. It's good to see you back at the terminal.",
+      "whisper_transcript": "Hello, mid-un. It's good to see you back at the terminal.",
       "wer": 0.0909
     },
     {
@@ -828,12 +828,12 @@
         "duration_sec": 13.39,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.65,
-        "dc_offset": 7.2e-05,
+        "dc_offset": 7.3e-05,
         "zcr": 0.1242,
         "energy_above_6k": 0.0013,
         "spectral_flatness": 0.001997,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1379.22
+        "f0_variance": 1385.4
       },
       "stage2_metrics": {
         "sample_rate": 24000,
@@ -841,12 +841,12 @@
         "duration_sec": 13.15,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.65,
-        "dc_offset": 7.3e-05,
+        "dc_offset": 7.4e-05,
         "zcr": 0.1245,
         "energy_above_6k": 0.0003,
         "spectral_flatness": 0.003571,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1343.06
+        "f0_variance": 1343.56
       },
       "stage3_metrics": {
         "sample_rate": 24000,
@@ -854,12 +854,12 @@
         "duration_sec": 13.15,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.65,
-        "dc_offset": 7.3e-05,
+        "dc_offset": 7.4e-05,
         "zcr": 0.1245,
         "energy_above_6k": 0.0003,
         "spectral_flatness": 0.003571,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1343.06
+        "f0_variance": 1343.56
       },
       "stage4_metrics": {
         "sample_rate": 24000,
@@ -867,12 +867,12 @@
         "duration_sec": 13.14,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.65,
-        "dc_offset": 7.3e-05,
+        "dc_offset": 7.4e-05,
         "zcr": 0.1244,
         "energy_above_6k": 0.0003,
         "spectral_flatness": 0.003571,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1343.59
+        "f0_variance": 1344.15
       },
       "stage5_metrics": {
         "sample_rate": 24000,
@@ -880,12 +880,12 @@
         "duration_sec": 13.14,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.65,
-        "dc_offset": 7.3e-05,
+        "dc_offset": 7.4e-05,
         "zcr": 0.1244,
         "energy_above_6k": 0.0003,
         "spectral_flatness": 0.003571,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1343.59
+        "f0_variance": 1344.15
       },
       "whisper_transcript": "Operating system, Linux on 64-bit architecture 12 central processors Python 3.12 memory, total memory, 15 gigabytes, free memory, 11 gigabytes, available memory, 12 gigabytes,",
       "wer": 0.2692
@@ -901,65 +901,65 @@
         "channels": 1,
         "duration_sec": 7.92,
         "clipping_ratio": 0.0,
-        "peak_dbfs": -4.76,
-        "dc_offset": 6.4e-05,
-        "zcr": 0.1642,
+        "peak_dbfs": -4.86,
+        "dc_offset": 6.1e-05,
+        "zcr": 0.1648,
         "energy_above_6k": 0.0005,
         "spectral_flatness": 0.001264,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1421.4
+        "f0_variance": 1417.37
       },
       "stage2_metrics": {
         "sample_rate": 24000,
         "channels": 1,
         "duration_sec": 7.96,
         "clipping_ratio": 0.0,
-        "peak_dbfs": -4.76,
-        "dc_offset": 6.4e-05,
-        "zcr": 0.1546,
+        "peak_dbfs": -4.86,
+        "dc_offset": 6.1e-05,
+        "zcr": 0.155,
         "energy_above_6k": 0.0015,
         "spectral_flatness": 0.004677,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1358.18
+        "f0_variance": 1355.13
       },
       "stage3_metrics": {
         "sample_rate": 24000,
         "channels": 1,
         "duration_sec": 7.96,
         "clipping_ratio": 0.0,
-        "peak_dbfs": -4.76,
-        "dc_offset": 6.4e-05,
-        "zcr": 0.1546,
+        "peak_dbfs": -4.86,
+        "dc_offset": 6.1e-05,
+        "zcr": 0.155,
         "energy_above_6k": 0.0015,
         "spectral_flatness": 0.004677,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1358.18
+        "f0_variance": 1355.13
       },
       "stage4_metrics": {
         "sample_rate": 24000,
         "channels": 1,
         "duration_sec": 7.96,
         "clipping_ratio": 0.0,
-        "peak_dbfs": -4.76,
-        "dc_offset": 6.4e-05,
-        "zcr": 0.1548,
+        "peak_dbfs": -4.86,
+        "dc_offset": 6.1e-05,
+        "zcr": 0.1551,
         "energy_above_6k": 0.0015,
         "spectral_flatness": 0.004677,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1357.25
+        "f0_variance": 1360.9
       },
       "stage5_metrics": {
         "sample_rate": 24000,
         "channels": 1,
         "duration_sec": 7.96,
         "clipping_ratio": 0.0,
-        "peak_dbfs": -4.76,
-        "dc_offset": 6.4e-05,
-        "zcr": 0.1548,
+        "peak_dbfs": -4.86,
+        "dc_offset": 6.1e-05,
+        "zcr": 0.1551,
         "energy_above_6k": 0.0015,
         "spectral_flatness": 0.004677,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1357.25
+        "f0_variance": 1360.9
       },
       "whisper_transcript": "The system memory is 12 GB, that's roughly 12,893 MB. Available for our processes.",
       "wer": 0.4737
@@ -976,12 +976,12 @@
         "duration_sec": 4.22,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.43,
-        "dc_offset": 6.4e-05,
-        "zcr": 0.0948,
+        "dc_offset": 5.8e-05,
+        "zcr": 0.095,
         "energy_above_6k": 0.0009,
         "spectral_flatness": 0.002412,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1431.84
+        "f0_variance": 1426.28
       },
       "stage2_metrics": {
         "sample_rate": 24000,
@@ -989,12 +989,12 @@
         "duration_sec": 4.2,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.43,
-        "dc_offset": 6.4e-05,
-        "zcr": 0.0885,
+        "dc_offset": 5.8e-05,
+        "zcr": 0.0887,
         "energy_above_6k": 0.0001,
         "spectral_flatness": 0.002693,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1414.6
+        "f0_variance": 1436.72
       },
       "stage3_metrics": {
         "sample_rate": 24000,
@@ -1002,12 +1002,12 @@
         "duration_sec": 4.2,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.43,
-        "dc_offset": 6.4e-05,
-        "zcr": 0.0885,
+        "dc_offset": 5.8e-05,
+        "zcr": 0.0887,
         "energy_above_6k": 0.0001,
         "spectral_flatness": 0.002693,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1414.6
+        "f0_variance": 1436.72
       },
       "stage4_metrics": {
         "sample_rate": 24000,
@@ -1015,12 +1015,12 @@
         "duration_sec": 4.2,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.43,
-        "dc_offset": 6.4e-05,
-        "zcr": 0.0885,
+        "dc_offset": 5.8e-05,
+        "zcr": 0.0887,
         "energy_above_6k": 0.0001,
         "spectral_flatness": 0.002693,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1414.6
+        "f0_variance": 1436.72
       },
       "stage5_metrics": {
         "sample_rate": 24000,
@@ -1028,12 +1028,12 @@
         "duration_sec": 4.2,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.43,
-        "dc_offset": 6.4e-05,
-        "zcr": 0.0885,
+        "dc_offset": 5.8e-05,
+        "zcr": 0.0887,
         "energy_above_6k": 0.0001,
         "spectral_flatness": 0.002693,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1414.6
+        "f0_variance": 1436.72
       },
       "whisper_transcript": "I can't believe it's already evening, but we haven't finished what we'd planned.",
       "wer": 0.0
@@ -1049,65 +1049,65 @@
         "channels": 1,
         "duration_sec": 5.04,
         "clipping_ratio": 0.0,
-        "peak_dbfs": -3.86,
-        "dc_offset": 9.2e-05,
-        "zcr": 0.0955,
+        "peak_dbfs": -3.92,
+        "dc_offset": 9e-05,
+        "zcr": 0.0953,
         "energy_above_6k": 0.0014,
         "spectral_flatness": 0.002298,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1508.46
+        "f0_variance": 1510.01
       },
       "stage2_metrics": {
         "sample_rate": 24000,
         "channels": 1,
         "duration_sec": 5.07,
         "clipping_ratio": 0.0,
-        "peak_dbfs": -3.86,
-        "dc_offset": 9.2e-05,
-        "zcr": 0.0908,
+        "peak_dbfs": -3.92,
+        "dc_offset": 9e-05,
+        "zcr": 0.0906,
         "energy_above_6k": 0.0006,
         "spectral_flatness": 0.009305,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1482.77
+        "f0_variance": 1494.95
       },
       "stage3_metrics": {
         "sample_rate": 24000,
         "channels": 1,
         "duration_sec": 5.07,
         "clipping_ratio": 0.0,
-        "peak_dbfs": -3.86,
-        "dc_offset": 9.2e-05,
-        "zcr": 0.0908,
+        "peak_dbfs": -3.92,
+        "dc_offset": 9e-05,
+        "zcr": 0.0906,
         "energy_above_6k": 0.0006,
         "spectral_flatness": 0.009305,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1482.77
+        "f0_variance": 1494.95
       },
       "stage4_metrics": {
         "sample_rate": 24000,
         "channels": 1,
         "duration_sec": 5.06,
         "clipping_ratio": 0.0,
-        "peak_dbfs": -3.86,
-        "dc_offset": 9.2e-05,
-        "zcr": 0.0909,
+        "peak_dbfs": -3.92,
+        "dc_offset": 9e-05,
+        "zcr": 0.0908,
         "energy_above_6k": 0.0006,
         "spectral_flatness": 0.009305,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1488.76
+        "f0_variance": 1495.28
       },
       "stage5_metrics": {
         "sample_rate": 24000,
         "channels": 1,
         "duration_sec": 5.06,
         "clipping_ratio": 0.0,
-        "peak_dbfs": -3.86,
-        "dc_offset": 9.2e-05,
-        "zcr": 0.0909,
+        "peak_dbfs": -3.92,
+        "dc_offset": 9e-05,
+        "zcr": 0.0908,
         "energy_above_6k": 0.0006,
         "spectral_flatness": 0.009305,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1488.76
+        "f0_variance": 1495.28
       },
       "whisper_transcript": "Era, are you struggling with that little script? Fufu, maybe you need my guidance after all.",
       "wer": 0.0625
@@ -1124,12 +1124,12 @@
         "duration_sec": 5.14,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.78,
-        "dc_offset": 0.000125,
-        "zcr": 0.1553,
+        "dc_offset": 0.000124,
+        "zcr": 0.1551,
         "energy_above_6k": 0.0005,
         "spectral_flatness": 0.001061,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1493.5
+        "f0_variance": 1497.66
       },
       "stage2_metrics": {
         "sample_rate": 24000,
@@ -1137,12 +1137,12 @@
         "duration_sec": 5.18,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.78,
-        "dc_offset": 0.000124,
-        "zcr": 0.1521,
+        "dc_offset": 0.000123,
+        "zcr": 0.1519,
         "energy_above_6k": 0.9051,
         "spectral_flatness": 0.080624,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1386.5
+        "f0_variance": 1386.86
       },
       "stage3_metrics": {
         "sample_rate": 24000,
@@ -1150,12 +1150,12 @@
         "duration_sec": 5.18,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.78,
-        "dc_offset": 0.000124,
-        "zcr": 0.1521,
+        "dc_offset": 0.000123,
+        "zcr": 0.1519,
         "energy_above_6k": 0.9051,
         "spectral_flatness": 0.080624,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1386.5
+        "f0_variance": 1386.86
       },
       "stage4_metrics": {
         "sample_rate": 24000,
@@ -1163,12 +1163,12 @@
         "duration_sec": 5.18,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.78,
-        "dc_offset": 0.000124,
-        "zcr": 0.1521,
+        "dc_offset": 0.000123,
+        "zcr": 0.1519,
         "energy_above_6k": 0.9051,
         "spectral_flatness": 0.080624,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1386.5
+        "f0_variance": 1386.86
       },
       "stage5_metrics": {
         "sample_rate": 24000,
@@ -1176,12 +1176,12 @@
         "duration_sec": 5.18,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.78,
-        "dc_offset": 0.000124,
-        "zcr": 0.1521,
+        "dc_offset": 0.000123,
+        "zcr": 0.1519,
         "energy_above_6k": 0.9051,
         "spectral_flatness": 0.080624,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1386.5
+        "f0_variance": 1386.86
       },
       "whisper_transcript": "Stop procrastinating right now, focus on your work, and do not make silly mistakes.",
       "wer": 0.0
@@ -1198,12 +1198,12 @@
         "duration_sec": 11.88,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.0,
-        "dc_offset": 0.000114,
-        "zcr": 0.1214,
+        "dc_offset": 0.000108,
+        "zcr": 0.1212,
         "energy_above_6k": 0.0009,
         "spectral_flatness": 0.001849,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1587.79
+        "f0_variance": 1583.22
       },
       "stage2_metrics": {
         "sample_rate": 24000,
@@ -1211,12 +1211,12 @@
         "duration_sec": 12.01,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.0,
-        "dc_offset": 0.000113,
-        "zcr": 0.1192,
+        "dc_offset": 0.000107,
+        "zcr": 0.119,
         "energy_above_6k": 0.0001,
         "spectral_flatness": 0.003347,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1608.02
+        "f0_variance": 1609.44
       },
       "stage3_metrics": {
         "sample_rate": 24000,
@@ -1224,12 +1224,12 @@
         "duration_sec": 12.01,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.0,
-        "dc_offset": 0.000113,
-        "zcr": 0.1192,
+        "dc_offset": 0.000107,
+        "zcr": 0.119,
         "energy_above_6k": 0.0001,
         "spectral_flatness": 0.003347,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1608.02
+        "f0_variance": 1609.44
       },
       "stage4_metrics": {
         "sample_rate": 24000,
@@ -1237,12 +1237,12 @@
         "duration_sec": 11.99,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.0,
-        "dc_offset": 0.000113,
-        "zcr": 0.1194,
+        "dc_offset": 0.000107,
+        "zcr": 0.1192,
         "energy_above_6k": 0.0001,
         "spectral_flatness": 0.003347,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1585.41
+        "f0_variance": 1587.44
       },
       "stage5_metrics": {
         "sample_rate": 24000,
@@ -1250,12 +1250,12 @@
         "duration_sec": 11.99,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.0,
-        "dc_offset": 0.000113,
-        "zcr": 0.1194,
+        "dc_offset": 0.000107,
+        "zcr": 0.1192,
         "energy_above_6k": 0.0001,
         "spectral_flatness": 0.003347,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1585.41
+        "f0_variance": 1587.44
       },
       "whisper_transcript": "I've analyzed the entire log stream and discovered the underlying socket timeout error. Everything is currently operating within normal temperature limits now. Let's proceed to the next verification step without delay.",
       "wer": 0.0
@@ -1272,12 +1272,12 @@
         "duration_sec": 7.42,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.79,
-        "dc_offset": 0.000114,
-        "zcr": 0.1636,
+        "dc_offset": 0.000107,
+        "zcr": 0.1634,
         "energy_above_6k": 0.0008,
         "spectral_flatness": 0.001566,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1759.32
+        "f0_variance": 1754.56
       },
       "stage2_metrics": {
         "sample_rate": 24000,
@@ -1285,12 +1285,12 @@
         "duration_sec": 7.43,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.79,
-        "dc_offset": 0.000113,
-        "zcr": 0.1622,
+        "dc_offset": 0.000107,
+        "zcr": 0.162,
         "energy_above_6k": 0.0033,
         "spectral_flatness": 0.017451,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1730.45
+        "f0_variance": 1740.92
       },
       "stage3_metrics": {
         "sample_rate": 24000,
@@ -1298,12 +1298,12 @@
         "duration_sec": 7.43,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.79,
-        "dc_offset": 0.000113,
-        "zcr": 0.1622,
+        "dc_offset": 0.000107,
+        "zcr": 0.162,
         "energy_above_6k": 0.0033,
         "spectral_flatness": 0.017451,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1730.45
+        "f0_variance": 1740.92
       },
       "stage4_metrics": {
         "sample_rate": 24000,
@@ -1311,12 +1311,12 @@
         "duration_sec": 7.43,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.79,
-        "dc_offset": 0.000113,
-        "zcr": 0.1622,
+        "dc_offset": 0.000107,
+        "zcr": 0.162,
         "energy_above_6k": 0.0033,
         "spectral_flatness": 0.017451,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1730.45
+        "f0_variance": 1740.92
       },
       "stage5_metrics": {
         "sample_rate": 24000,
@@ -1324,12 +1324,12 @@
         "duration_sec": 7.43,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.79,
-        "dc_offset": 0.000113,
-        "zcr": 0.1622,
+        "dc_offset": 0.000107,
+        "zcr": 0.162,
         "energy_above_6k": 0.0033,
         "spectral_flatness": 0.017451,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1730.45
+        "f0_variance": 1740.92
       },
       "whisper_transcript": "The disc usage is currently at 57.4% with 16GB RAM and 4.2GHz clock speed.",
       "wer": 0.5238
@@ -1346,8 +1346,8 @@
         "duration_sec": 4.56,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.27,
-        "dc_offset": 5.5e-05,
-        "zcr": 0.1298,
+        "dc_offset": 6e-05,
+        "zcr": 0.1299,
         "energy_above_6k": 0.0007,
         "spectral_flatness": 0.001554,
         "clicks_at_joins": 0.0,
@@ -1359,12 +1359,12 @@
         "duration_sec": 4.6,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.27,
-        "dc_offset": 5.5e-05,
+        "dc_offset": 5.9e-05,
         "zcr": 0.1272,
         "energy_above_6k": 0.274,
         "spectral_flatness": 0.163547,
         "clicks_at_joins": 0.0,
-        "f0_variance": 837.62
+        "f0_variance": 838.26
       },
       "stage3_metrics": {
         "sample_rate": 24000,
@@ -1372,12 +1372,12 @@
         "duration_sec": 4.6,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.27,
-        "dc_offset": 5.5e-05,
+        "dc_offset": 5.9e-05,
         "zcr": 0.1272,
         "energy_above_6k": 0.274,
         "spectral_flatness": 0.163547,
         "clicks_at_joins": 0.0,
-        "f0_variance": 837.62
+        "f0_variance": 838.26
       },
       "stage4_metrics": {
         "sample_rate": 24000,
@@ -1385,12 +1385,12 @@
         "duration_sec": 4.6,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.27,
-        "dc_offset": 5.5e-05,
+        "dc_offset": 5.9e-05,
         "zcr": 0.1272,
         "energy_above_6k": 0.274,
         "spectral_flatness": 0.163547,
         "clicks_at_joins": 0.0,
-        "f0_variance": 837.62
+        "f0_variance": 838.26
       },
       "stage5_metrics": {
         "sample_rate": 24000,
@@ -1398,14 +1398,14 @@
         "duration_sec": 4.6,
         "clipping_ratio": 0.0,
         "peak_dbfs": -3.27,
-        "dc_offset": 5.5e-05,
+        "dc_offset": 5.9e-05,
         "zcr": 0.1272,
         "energy_above_6k": 0.274,
         "spectral_flatness": 0.163547,
         "clicks_at_joins": 0.0,
-        "f0_variance": 837.62
+        "f0_variance": 838.26
       },
-      "whisper_transcript": "Check the status at the local server link or inspect the audit.log file in nano.",
+      "whisper_transcript": "Check the status at the local server link or inspect the audit.log file in NANO.",
       "wer": 0.1765
     },
     {
@@ -1420,12 +1420,12 @@
         "duration_sec": 5.4,
         "clipping_ratio": 0.0,
         "peak_dbfs": -4.32,
-        "dc_offset": 3.1e-05,
-        "zcr": 0.1622,
+        "dc_offset": 3.4e-05,
+        "zcr": 0.1619,
         "energy_above_6k": 0.0007,
         "spectral_flatness": 0.00154,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1104.66
+        "f0_variance": 1107.72
       },
       "stage2_metrics": {
         "sample_rate": 24000,
@@ -1433,12 +1433,12 @@
         "duration_sec": 5.33,
         "clipping_ratio": 0.0,
         "peak_dbfs": -4.32,
-        "dc_offset": 3.1e-05,
-        "zcr": 0.1385,
+        "dc_offset": 3.5e-05,
+        "zcr": 0.1387,
         "energy_above_6k": 0.0029,
         "spectral_flatness": 0.022244,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1162.03
+        "f0_variance": 1159.41
       },
       "stage3_metrics": {
         "sample_rate": 24000,
@@ -1446,12 +1446,12 @@
         "duration_sec": 5.33,
         "clipping_ratio": 0.0,
         "peak_dbfs": -4.32,
-        "dc_offset": 3.1e-05,
-        "zcr": 0.1385,
+        "dc_offset": 3.5e-05,
+        "zcr": 0.1387,
         "energy_above_6k": 0.0029,
         "spectral_flatness": 0.022244,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1162.03
+        "f0_variance": 1159.41
       },
       "stage4_metrics": {
         "sample_rate": 24000,
@@ -1459,12 +1459,12 @@
         "duration_sec": 5.33,
         "clipping_ratio": 0.0,
         "peak_dbfs": -4.32,
-        "dc_offset": 3.1e-05,
-        "zcr": 0.1387,
+        "dc_offset": 3.5e-05,
+        "zcr": 0.1389,
         "energy_above_6k": 0.0029,
         "spectral_flatness": 0.022244,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1120.59
+        "f0_variance": 1116.68
       },
       "stage5_metrics": {
         "sample_rate": 24000,
@@ -1472,15 +1472,15 @@
         "duration_sec": 5.33,
         "clipping_ratio": 0.0,
         "peak_dbfs": -4.32,
-        "dc_offset": 3.1e-05,
-        "zcr": 0.1387,
+        "dc_offset": 3.5e-05,
+        "zcr": 0.1389,
         "energy_above_6k": 0.0029,
         "spectral_flatness": 0.022244,
         "clicks_at_joins": 0.0,
-        "f0_variance": 1120.59
+        "f0_variance": 1116.68
       },
-      "whisper_transcript": "Gandhat, mid-hansan. Yash, our preparations are complete so let's do our best.",
-      "wer": 0.25
+      "whisper_transcript": "Gandhat, mid-hun-san. Yash, our preparations are complete so let's do our best.",
+      "wer": 0.1667
     }
   ]
 }
