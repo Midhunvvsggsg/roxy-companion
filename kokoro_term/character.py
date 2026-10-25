@@ -18,6 +18,8 @@ class VoiceConfig(BaseModel):
     speed: float = Field(default=1.20, ge=0.9, le=1.5)
     pitch: float = -4.0
     lang: str = "en-US"
+    pinned: bool = False
+    fallback_to_local: bool = True
     pause_comma_ms: int = 120
     pause_sentence_ms: int = 250
     trim_silence: bool = True

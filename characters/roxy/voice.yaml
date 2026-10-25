@@ -1,10 +1,11 @@
 provider: cloud
-fallback_to_local: true
+pinned: true
+fallback_to_local: false
 engine: edge-tts
-voice_id: en-US-AvaNeural
-preset: young_japanese_girl_energetic
-speed: 1.28
-pitch: 20
+voice_id: en-US-AnaNeural
+preset: teen_anime_girl
+speed: 1.15
+pitch: 3.0
 lang: en-US
 pause_comma_ms: 75
 pause_sentence_ms: 160

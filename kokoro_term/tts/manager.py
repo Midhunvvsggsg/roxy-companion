@@ -30,8 +30,8 @@ class TTSManager:
     ):
         self.voice_config = voice_config or VoiceConfig()
         self.preferred_provider = preferred_provider.lower()
-        self.fallback_enabled = fallback_enabled
-        self.pinned = pinned
+        self.fallback_enabled = fallback_enabled and getattr(self.voice_config, "fallback_to_local", True)
+        self.pinned = pinned or getattr(self.voice_config, "pinned", False)
 
         self.edge_provider = EdgeTTSProvider(self.voice_config)
         self.local_provider = LocalTTSProvider(self.voice_config)

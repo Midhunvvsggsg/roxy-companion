@@ -53,11 +53,11 @@ class AvatarConfig(BaseModel):
 
 
 class VoiceSettingsConfig(BaseModel):
-    provider: str = Field(default="local", description="TTS provider: 'local' (offline/private default) or 'edge' (cloud)")
-    preset: str = "mature_mommy_fast"
-    voice: str = "en-US-AvaNeural"
-    speed: float = Field(default=1.20, ge=0.9, le=1.5)
-    base_pitch: int = -4
+    provider: str = Field(default="edge", description="TTS provider: 'edge' (cloud)")
+    preset: str = "teen_anime_girl"
+    voice: str = "en-US-AnaNeural"
+    speed: float = Field(default=1.15, ge=0.9, le=1.5)
+    base_pitch: int = 2
     base_rate: int = 20
     pause_comma_ms: int = 120
     pause_sentence_ms: int = 250
