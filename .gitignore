@@ -23,4 +23,5 @@ data/*.wav
 
 # Character-specific avatar art (do not bundle in public repository)
 characters/roxy/avatar/
+!characters/roxy/avatar/forehead_masks.json
 assets_in/roxy/

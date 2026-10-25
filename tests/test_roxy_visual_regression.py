@@ -122,3 +122,55 @@ def test_forehead_palette_check_rendered_outputs():
         r_mean = np.mean(r)
         b_mean = np.mean(b)
         assert 15 <= (r_mean - b_mean) <= 45, f"{view_name} forehead skin balance unexpected: R-B = {r_mean - b_mean}"
+
+
+def test_face_symmetry_metrics_under_one_point_five_percent():
+    """Verify face symmetry metrics: eye center height, width, brow height, mouth offset, and bangs height are strictly < 1.5% of face width."""
+    layers_dir = Path("/home/midhun/kokoro-term/characters/roxy/avatar/layers")
+    base = cv2.imread(str(layers_dir / "base.png"), cv2.IMREAD_UNCHANGED)
+    brows = cv2.imread(str(layers_dir / "brows_neutral.png"), cv2.IMREAD_UNCHANGED)
+    mouth = cv2.imread(str(layers_dir / "mouth_closed.png"), cv2.IMREAD_UNCHANGED)
+    hair = cv2.imread(str(layers_dir / "hair_front.png"), cv2.IMREAD_UNCHANGED)
+    eyes = cv2.imread(str(layers_dir / "eyes_open.png"), cv2.IMREAD_UNCHANGED)
+
+    # Face width at eye level
+    skin_xs = np.where(base[450, :, 3] > 0)[0]
+    face_width = float(skin_xs.max() - skin_xs.min())
+    midline = float(skin_xs.min() + skin_xs.max()) / 2.0
+    assert face_width > 400
+
+    # 1. Mouth offset
+    mouth_pts = np.where(mouth[..., 3] > 50)
+    mouth_x_center = float(np.mean(mouth_pts[1]))
+    mouth_offset_pct = (abs(mouth_x_center - midline) / face_width) * 100.0
+    assert mouth_offset_pct < 1.5, f"Mouth offset {mouth_offset_pct:.2f}% exceeds 1.5%"
+
+    # 2. Brows height difference
+    brow_pts = np.where(brows[..., 3] > 50)
+    b_left = brow_pts[1] < midline
+    b_right = brow_pts[1] > midline
+    brow_diff_pct = (abs(np.mean(brow_pts[0][b_left]) - np.mean(brow_pts[0][b_right])) / face_width) * 100.0
+    assert brow_diff_pct < 1.5, f"Brow height diff {brow_diff_pct:.2f}% exceeds 1.5%"
+
+    # 3. Eyes height difference
+    eye_pts = np.where(eyes[..., 3] > 50)
+    e_left = eye_pts[1] < midline
+    e_right = eye_pts[1] > midline
+    eye_h_pct = (abs(np.mean(eye_pts[0][e_left]) - np.mean(eye_pts[0][e_right])) / face_width) * 100.0
+    assert eye_h_pct < 1.5, f"Eye height diff {eye_h_pct:.2f}% exceeds 1.5%"
+
+    # 4. Eyes width from midline difference
+    eye_w_diff = abs((midline - np.mean(eye_pts[1][e_left])) - (np.mean(eye_pts[1][e_right]) - midline))
+    eye_w_pct = (eye_w_diff / face_width) * 100.0
+    assert eye_w_pct < 1.5, f"Eye width diff {eye_w_pct:.2f}% exceeds 1.5%"
+
+    # 5. Bangs height difference
+    with open(MASKS_FILE) as f:
+        masks = json.load(f)
+    bangs_pts = np.array(masks["item_d_bangs_bottom_edge"])[1:12]
+    b_left_pts = [p for p in bangs_pts if p[0] < midline]
+    b_right_pts = [p for p in bangs_pts if p[0] > midline]
+    bangs_h_diff = abs(np.mean([p[1] for p in b_left_pts]) - np.mean([p[1] for p in b_right_pts]))
+    bangs_h_pct = (bangs_h_diff / face_width) * 100.0
+    assert bangs_h_pct < 1.5, f"Bangs height diff {bangs_h_pct:.2f}% exceeds 1.5%"
+
