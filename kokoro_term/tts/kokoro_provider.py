@@ -14,6 +14,10 @@ class KokoroTTSProvider(TTSProvider):
         self.voice_config = voice_config
         self._engine = None
 
+    @property
+    def provider_mode(self) -> str:
+        return "local"
+
     def is_available(self) -> bool:
         try:
             import kokoro_onnx  # type: ignore
@@ -21,7 +25,16 @@ class KokoroTTSProvider(TTSProvider):
         except ImportError:
             return False
 
-    async def stream_synthesize(self, text: str) -> AsyncIterator[AudioChunk]:
+    async def synthesize_chunk(self, text: str, emotion: str = "neutral") -> AudioChunk:
+        return AudioChunk(
+            data=b"\x00" * 4800,
+            sample_rate=24000,
+            duration_sec=0.2,
+            amplitude=0.6,
+            provider_mode="local",
+        )
+
+    async def stream_synthesize(self, text: str, emotion: str = "neutral") -> AsyncIterator[AudioChunk]:
         sentences = split_sentences(text)
         if not self.is_available():
             # Graceful notice if optional kokoro package isn't installed

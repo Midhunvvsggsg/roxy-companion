@@ -12,10 +12,23 @@ class MockTTSProvider(TTSProvider):
     def __init__(self, delay_per_sentence: float = 0.05):
         self.delay = delay_per_sentence
 
+    @property
+    def provider_mode(self) -> str:
+        return "local"
+
     def is_available(self) -> bool:
         return True
 
-    async def stream_synthesize(self, text: str) -> AsyncIterator[AudioChunk]:
+    async def synthesize_chunk(self, text: str, emotion: str = "neutral") -> AudioChunk:
+        return AudioChunk(
+            data=b"\x00" * 400,
+            sample_rate=24000,
+            duration_sec=0.15,
+            amplitude=0.5,
+            provider_mode="local",
+        )
+
+    async def stream_synthesize(self, text: str, emotion: str = "neutral") -> AsyncIterator[AudioChunk]:
         sentences = split_sentences(text)
         for s in sentences:
             words = s.split()

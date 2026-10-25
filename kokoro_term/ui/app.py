@@ -492,6 +492,12 @@ class KokoroApp(App):
             except Exception:
                 self.avatar_backend = None
 
+        # TTS Manager with pinning and visible fallback support
+        from kokoro_term.tts.manager import TTSManager
+        pref = getattr(self.config.voice, "provider", "edge") if hasattr(self.config, "voice") and self.config.voice else "edge"
+        pinned = getattr(self.config.voice, "pinned", False) if hasattr(self.config, "voice") and self.config.voice else False
+        self.tts = TTSManager(voice_config=self.character.voice, preferred_provider=pref, pinned=pinned)
+
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         with Horizontal(id="main-container"):
@@ -748,6 +754,9 @@ class KokoroApp(App):
                 "- /character list: List installed characters\n"
                 "- /character use <name>: Hot-swap active companion on the fly\n"
                 "- /character new <id> <name>: Interactive character generator\n"
+                "- /voice speed <x>: Instantly adjust Roxy's voice speed (0.9 to 1.5)\n"
+                "- /voice save <preset>: Save voice tuning to character preset\n"
+                "- /voice audition: Render audition benchmarks at speeds 1.0, 1.15, 1.25, 1.35\n"
                 "- /perf: Display process RAM, DB size, and resource telemetry\n"
                 "- /tools: List registered agency tools and permission tiers\n"
                 "- /audit: View recent security audit logs\n"
@@ -791,6 +800,140 @@ class KokoroApp(App):
 
         elif root_cmd == "/testtalk":
             self._run_test_talk()
+
+        elif root_cmd == "/voice":
+            sub_cmd = parts[1].lower() if len(parts) > 1 else ""
+            if sub_cmd == "speed":
+                if len(parts) < 3:
+                    cur_speed = self.character.voice.speed if self.character.voice else 1.20
+                    await chat_scroll.mount(ChatMessageWidget(sender="System", text=f"Usage: /voice speed <0.9 - 1.5>\nCurrent speed: {cur_speed:.2f}x", is_user=False))
+                else:
+                    try:
+                        val = float(parts[2])
+                        val = max(0.9, min(1.5, val))
+                        if self.character.voice:
+                            self.character.voice.speed = val
+                        # Persist to active character voice.yaml if exists
+                        v_path = Path("characters") / self.character.id / "voice.yaml"
+                        if v_path.exists():
+                            import yaml
+                            try:
+                                with open(v_path, "r", encoding="utf-8") as vf:
+                                    ydata = yaml.safe_load(vf) or {}
+                                ydata["speed"] = val
+                                with open(v_path, "w", encoding="utf-8") as vf:
+                                    yaml.safe_dump(ydata, vf, sort_keys=False)
+                            except Exception:
+                                pass
+                        rate_pct = round((val - 1.0) * 100)
+                        await chat_scroll.mount(ChatMessageWidget(
+                            sender="System",
+                            text=f"[bold green]✓ Voice speed set to {val:.2f}x ({rate_pct:+d}% native rate). Applied instantly.[/bold green]",
+                            is_user=False
+                        ))
+                    except ValueError:
+                        await chat_scroll.mount(ChatMessageWidget(sender="System", text="Speed value must be a numeric float (0.9 to 1.5).", is_user=False))
+
+            elif sub_cmd == "save":
+                if len(parts) < 3:
+                    await chat_scroll.mount(ChatMessageWidget(sender="System", text="Usage: /voice save <preset_name>", is_user=False))
+                else:
+                    preset_name = parts[2].lower()
+                    if self.character.voice:
+                        self.character.voice.preset = preset_name
+                    v_path = Path("characters") / self.character.id / "voice.yaml"
+                    if v_path.exists():
+                        import yaml
+                        try:
+                            with open(v_path, "r", encoding="utf-8") as vf:
+                                ydata = yaml.safe_load(vf) or {}
+                            ydata["preset"] = preset_name
+                            with open(v_path, "w", encoding="utf-8") as vf:
+                                yaml.safe_dump(ydata, vf, sort_keys=False)
+                        except Exception:
+                            pass
+                    await chat_scroll.mount(ChatMessageWidget(
+                        sender="System",
+                        text=f"[bold green]✓ Voice settings saved to preset '{preset_name}'.[/bold green]",
+                        is_user=False
+                    ))
+
+            elif sub_cmd == "audition":
+                await chat_scroll.mount(ChatMessageWidget(
+                    sender="System",
+                    text="[bold]Starting voice pace audition across speeds 1.0, 1.15, 1.25, 1.35...[/bold]",
+                    is_user=False
+                ))
+                try:
+                    import subprocess, sys
+                    script_path = Path("scripts/voice_audition.py")
+                    if not script_path.exists():
+                        script_path = Path(__file__).resolve().parent.parent / "scripts" / "voice_audition.py"
+                    subprocess.Popen([sys.executable, str(script_path), "--output-dir", "voice_audition"])
+                    await chat_scroll.mount(ChatMessageWidget(
+                        sender="System",
+                        text="[bold green]✓ Audition generated! Report and audio files saved to voice_audition/audition_report.md.[/bold green]",
+                        is_user=False
+                    ))
+                except Exception as e:
+                    await chat_scroll.mount(ChatMessageWidget(sender="System", text=f"Failed to run audition: {e}", is_user=False))
+
+            elif sub_cmd == "provider":
+                if len(parts) < 3:
+                    pin_str = " (pinned)" if self.tts.pinned else ""
+                    await chat_scroll.mount(ChatMessageWidget(
+                        sender="System",
+                        text=f"Active TTS Provider: [bold cyan]{self.tts.active_mode}{pin_str}[/bold cyan]\nUsage: /voice provider <edge|local|kokoro> [--pin]",
+                        is_user=False
+                    ))
+                else:
+                    prov = parts[2].lower()
+                    pin = "--pin" in parts
+                    self.tts.set_provider(prov, pin=pin)
+                    pin_label = "pinned" if pin else "unpinned"
+                    await chat_scroll.mount(ChatMessageWidget(
+                        sender="System",
+                        text=f"[bold green]✓ Voice provider set to '{prov}' ({pin_label}). Status: {self.tts.status_label}[/bold green]",
+                        is_user=False
+                    ))
+
+            elif sub_cmd == "debug" and len(parts) > 2 and parts[2].lower() == "last":
+                debug_dir = Path("data/voice_debug_last")
+                saved = []
+                if debug_dir.exists():
+                    saved = [str(f) for f in debug_dir.glob("*_stage*.wav")]
+                if not saved:
+                    saved = self.tts.save_last_debug_stages(debug_dir)
+
+                if saved:
+                    sample_stages = saved[:5]
+                    stage_list = "\n".join([f"  • [cyan]{Path(s).name}[/cyan]" for s in sample_stages])
+                    await chat_scroll.mount(ChatMessageWidget(
+                        sender="System",
+                        text=f"[bold green]✓ Saved audio stage files for last turn to {debug_dir}:[/bold green]\n{stage_list}",
+                        is_user=False
+                    ))
+                else:
+                    await chat_scroll.mount(ChatMessageWidget(
+                        sender="System",
+                        text="[bold yellow]No voice debug stages captured yet. Speak to Roxy first to generate audio stages.[/bold yellow]",
+                        is_user=False
+                    ))
+
+            else:
+                cur_speed = self.character.voice.speed if self.character.voice else 1.15
+                cur_preset = self.character.voice.preset if self.character.voice else "mature_mommy_fast"
+                await chat_scroll.mount(ChatMessageWidget(
+                    sender="System",
+                    text=(
+                        f"[bold]🎙️ Voice Controls:[/bold]\n"
+                        f"  • Provider: [bold cyan]{self.tts.status_label}[/bold cyan]\n"
+                        f"  • Active Preset: [bold cyan]{cur_preset}[/bold cyan]\n"
+                        f"  • Current Speed: [bold cyan]{cur_speed:.2f}x[/bold cyan] ({round((cur_speed-1.0)*100):+d}% native rate)\n"
+                        f"  • Commands: /voice speed <0.9-1.5> | /voice provider <edge|local> [--pin] | /voice debug last | /voice audition"
+                    ),
+                    is_user=False
+                ))
 
         elif root_cmd == "/avatar":
             sub_cmd = parts[1].lower() if len(parts) > 1 else "validate"
@@ -1318,9 +1461,15 @@ class KokoroApp(App):
 
     @work(exclusive=False)
     async def _check_memory_consolidation(self) -> None:
-        """Background consolidation worker running silently when idle."""
-        if self.memory:
+        """Background consolidation and auto-fact extraction worker running silently when idle."""
+        if self.memory and self.llm:
             try:
+                last_u = getattr(self, "_last_user_message", "")
+                last_a = getattr(self, "_last_assistant_message", "")
+                if last_u and last_a:
+                    await self.memory.extract_facts_from_turn(
+                        self.character.id, self.user_id, last_u, last_a, self.llm
+                    )
                 await self.memory.consolidate_if_needed(self.character.id, self.user_id, self.llm)
             except Exception:
                 pass

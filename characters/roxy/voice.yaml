@@ -11,13 +11,13 @@ fallback_to_local: true
 engine: "edge-tts"
 voice_id: "ja-JP-NanamiNeural"
 preset: "young_japanese_girl_energetic"
-speed: 1.28
-pitch: 20
+speed: 1.15
+pitch: -4
 lang: "ja-JP"
 
-# Natural pause timings (milliseconds - snappy young anime cadence)
-pause_comma_ms: 75
-pause_sentence_ms: 160
+# Natural pause timings (milliseconds - natural human rhythm without clipping)
+pause_comma_ms: 100
+pause_sentence_ms: 250
 trim_silence: true
 
 # Per-emotion pace multipliers (relative to base speed 1.28x)
