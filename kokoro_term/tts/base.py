@@ -14,6 +14,7 @@ class AudioChunk(BaseModel):
     word_timings: Optional[list[dict]] = None  # [{"word": str, "start": float, "end": float}]
     visemes: Optional[list[dict]] = None       # [{"time": float, "viseme": str}]
     provider_mode: str = "local"               # "cloud" or "local"
+    stages: Optional[dict[str, bytes]] = None  # Captured pipeline stages: stage1_raw, stage2_trimmed, etc.
 
 
 class TTSProviderError(Exception):

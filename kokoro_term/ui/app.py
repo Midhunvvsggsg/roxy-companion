@@ -996,11 +996,9 @@ class KokoroApp(App):
 
             elif sub_cmd == "debug" and len(parts) > 2 and parts[2].lower() == "last":
                 debug_dir = Path("data/voice_debug_last")
-                saved = []
-                if debug_dir.exists():
+                saved = self.tts.save_last_debug_stages(debug_dir)
+                if not saved and debug_dir.exists():
                     saved = [str(f) for f in debug_dir.glob("*_stage*.wav")]
-                if not saved:
-                    saved = self.tts.save_last_debug_stages(debug_dir)
 
                 if saved:
                     sample_stages = saved[:5]
@@ -1643,7 +1641,90 @@ class KokoroApp(App):
                 else:
                     self.messages.append(LLMMessage(role="assistant", content=cleaned_final))
 
+                # Vocalize assistant reply through TTS pipeline
+                if getattr(self, "tts", None):
+                    asyncio.create_task(self._speak_reply(cleaned_final, emotion=detected_emotion))
+
             chat_scroll.scroll_end(animate=False)
+
+    async def _speak_reply(self, text: str, emotion: str = "neutral") -> None:
+        """Synthesize and vocalize Roxy's reply with synchronized mouth shapes and visible fallback notices."""
+        if not text or not getattr(self, "tts", None):
+            return
+
+        try:
+            # For long research articles, speak only a 1-2 sentence summary
+            clean_text = re.sub(r"\[emotion:[a-zA-Z0-9_-]+\]", "", text).strip()
+            if clean_text.startswith("# ") or "\n# " in clean_text or "### Numbered Sources" in clean_text:
+                # Extract first 1-2 sentences of narrative lead
+                lead_lines = [ln.strip() for ln in clean_text.splitlines() if ln.strip() and not ln.strip().startswith(("#", "*", "-", "|", ">"))]
+                clean_text = " ".join(lead_lines[:2]) if lead_lines else "I have completed the web research and displayed the article for you."
+
+            from kokoro_term.tts.speech_style import normalize_text_for_tts, apply_pronunciation_map
+            norm = normalize_text_for_tts(clean_text)
+            spoken = apply_pronunciation_map(norm, self.character.voice.pronunciation_map if self.character.voice else None)
+
+            chunk = await self.tts.synthesize_chunk(spoken, emotion=emotion)
+            if not chunk or not chunk.data:
+                return
+
+            # Check and display visible fallback notice if cloud provider failed
+            notice = self.tts.consume_fallback_notice()
+            if notice:
+                chat_scroll = self.query_one("#chat-scroll", VerticalScroll)
+                await chat_scroll.mount(ChatMessageWidget(sender="System", text=f"[bold yellow]{notice}[/bold yellow]", is_user=False))
+
+            # Lip-sync and playback
+            from kokoro_term.avatar.lipsync import AmplitudeLipSync
+            from kokoro_term.tts.audio_processor import decode_audio_to_mono
+            pcm_mono, sr = decode_audio_to_mono(chunk.data, target_sr=chunk.sample_rate or 24000)
+            pcm_bytes = (np.clip(pcm_mono, -1.0, 1.0) * 32767).astype(np.int16).tobytes()
+
+            lipsync = AmplitudeLipSync()
+            lipsync.load_audio_pcm(pcm_bytes, sample_rate=sr)
+
+            avatar_panel = self.query_one("#avatar-panel", AvatarPanel)
+            avatar_panel.set_speaking(True, lipsync)
+            if self.avatar_backend:
+                self.avatar_backend.set_speaking(True, lipsync)
+
+            tmp_wav = Path("data/last_reply.wav")
+            tmp_wav.parent.mkdir(parents=True, exist_ok=True)
+            tmp_wav.write_bytes(chunk.data)
+
+            audio_proc = None
+            for player_cmd in ("aplay", "paplay", "afplay"):
+                if shutil.which(player_cmd):
+                    try:
+                        audio_proc = subprocess.Popen([player_cmd, str(tmp_wav)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                        break
+                    except Exception:
+                        pass
+
+            dur = chunk.duration_sec or (len(pcm_mono) / float(sr))
+            start_t = time.time()
+            while time.time() - start_t < dur:
+                elapsed = time.time() - start_t
+                shape = lipsync.get_mouth_shape(elapsed)
+                avatar_panel.set_mouth(shape)
+                if self.avatar_backend and hasattr(self.avatar_backend, "set_mouth"):
+                    self.avatar_backend.set_mouth(shape)
+                avatar_panel.refresh()
+                await asyncio.sleep(0.04)
+
+            if audio_proc:
+                try:
+                    audio_proc.wait(timeout=0.5)
+                except Exception:
+                    pass
+
+        except Exception as e:
+            pass
+        finally:
+            avatar_panel = self.query_one("#avatar-panel", AvatarPanel)
+            avatar_panel.set_speaking(False)
+            if self.avatar_backend:
+                self.avatar_backend.set_speaking(False)
 
     @work(exclusive=False)
     async def _check_memory_consolidation(self) -> None:

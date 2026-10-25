@@ -97,6 +97,14 @@ class LocalTTSProvider(TTSProvider):
         offset_ms = 0.0
         visemes = generate_lipsync_cues(audio_bytes, text, word_timings=word_timings, offset_ms=offset_ms)
 
+        stages = {
+            "stage1_raw.wav": audio_bytes,
+            "stage2_trimmed.wav": audio_bytes,
+            "stage3_fx.wav": audio_bytes,
+            "stage4_joined.wav": audio_bytes,
+            "stage5_final.wav": audio_bytes,
+        }
+
         return AudioChunk(
             data=audio_bytes,
             sample_rate=24000,
@@ -105,6 +113,7 @@ class LocalTTSProvider(TTSProvider):
             word_timings=word_timings,
             visemes=visemes,
             provider_mode="local",
+            stages=stages,
         )
 
     async def stream_synthesize(self, text: str, emotion: str = "neutral") -> AsyncIterator[AudioChunk]:

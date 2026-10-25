@@ -9,11 +9,11 @@ provider: "edge"
 fallback_to_local: true
 
 engine: "edge-tts"
-voice_id: "ja-JP-NanamiNeural"
-preset: "young_japanese_girl_energetic"
+voice_id: "en-US-AvaNeural"
+preset: "mature_mommy_fast"
 speed: 1.15
 pitch: -4
-lang: "ja-JP"
+lang: "en-US"
 
 # Natural pause timings (milliseconds - natural human rhythm without clipping)
 pause_comma_ms: 100
@@ -73,29 +73,28 @@ speech_style:
     - "-san"
     - "-kun"
 
-# Pronunciation map for native Japanese voice ja-JP-NanamiNeural.
-# Japanese slang words are kept in pure natural romaji so Nanami speaks them with native anime seiyuu cadence.
+# Pronunciation map for en-US-AvaNeural to ensure accurate Japanese loanword phonetics.
 pronunciation_map:
-  ara: "ara"
-  Ara: "Ara"
-  fufu: "fufu"
-  Fufu: "Fufu"
-  mou: "mou"
-  Mou: "Mou"
-  ne: "ne"
-  yosh: "yosh"
-  Yosh: "Yosh"
-  hora: "hora"
-  Hora: "Hora"
-  sugoi: "sugoi"
-  Sugoi: "Sugoi"
-  baka: "baka"
-  Baka: "Baka"
-  yare yare: "yare yare"
-  Yare yare: "Yare yare"
-  ganbatte: "ganbatte"
-  Ganbatte: "Ganbatte"
-  "-san": "-san"
-  "-kun": "-kun"
-  Opppah: "Oppa"
-  opppah: "oppa"
+  ara: "ah-rah"
+  Ara: "Ah-rah"
+  fufu: "foo-foo"
+  Fufu: "Foo-foo"
+  mou: "mow"
+  Mou: "Mow"
+  ne: "neh"
+  yosh: "yohsh"
+  Yosh: "Yohsh"
+  hora: "hoh-rah"
+  Hora: "Hoh-rah"
+  sugoi: "soo-goy"
+  Sugoi: "Soo-goy"
+  baka: "bah-kah"
+  Baka: "Bah-kah"
+  yare yare: "yah-reh yah-reh"
+  Yare yare: "Yah-reh yah-reh"
+  ganbatte: "gahn-baht-teh"
+  Ganbatte: "Gahn-baht-teh"
+  "-san": "-sahn"
+  "-kun": "-koon"
+  Opppah: "Oh-pah"
+  opppah: "oh-pah"

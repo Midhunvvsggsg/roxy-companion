@@ -103,6 +103,11 @@ class EdgeTTSProvider(TTSProvider):
             if len(audio_data) < 100:
                 raise TTSProviderError("Edge-TTS returned empty audio stream.")
 
+            # Stage 1: Raw engine output
+            from kokoro_term.tts.audio_processor import decode_audio_to_mono, encode_mono_to_wav, apply_limiter
+            mono_raw, sr = decode_audio_to_mono(audio_data, target_sr=24000)
+            stage1_raw = encode_mono_to_wav(mono_raw, sample_rate=sr)
+
             # Determine pause length: comma clause (~100ms) vs sentence terminal (~250ms)
             is_sentence = clean.endswith((".", "!", "?"))
             is_comma = clean.endswith((",", ";", "—", "–"))
@@ -112,15 +117,37 @@ class EdgeTTSProvider(TTSProvider):
                 else (getattr(self.voice_config, "pause_comma_ms", 100) if is_comma else 0)
             )
 
-            # Trim silence above 150ms and apply anti-click fades + limiter
+            # Stage 2: Silence trim
             if getattr(self.voice_config, "trim_silence", True):
-                audio_data = trim_audio_silence(
-                    audio_data,
+                stage2_wav = trim_audio_silence(
+                    stage1_raw,
                     lead_padding_ms=150,
                     trail_padding_ms=150,
                     post_pause_ms=pause_ms,
                     out_format="wav",
                 )
+            else:
+                stage2_wav = stage1_raw
+
+            # Stage 3: Speed / Pitch / Limiter FX (-1 dBFS limiter)
+            mono_trimmed, _ = decode_audio_to_mono(stage2_wav, target_sr=sr)
+            limited = apply_limiter(mono_trimmed, threshold_dbfs=-1.0)
+            stage3_wav = encode_mono_to_wav(limited, sample_rate=sr)
+
+            # Stage 4: Chunk joining
+            stage4_wav = stage3_wav
+
+            # Stage 5: Final playback buffer
+            stage5_wav = stage3_wav
+            audio_data = stage5_wav
+
+            stages = {
+                "stage1_raw.wav": stage1_raw,
+                "stage2_trimmed.wav": stage2_wav,
+                "stage3_fx.wav": stage3_wav,
+                "stage4_joined.wav": stage4_wav,
+                "stage5_final.wav": stage5_wav,
+            }
 
             # Generate viseme alignment cues
             visemes = generate_lipsync_cues(
@@ -141,6 +168,7 @@ class EdgeTTSProvider(TTSProvider):
                 word_timings=word_timings,
                 visemes=visemes,
                 provider_mode="cloud",
+                stages=stages,
             )
 
         except Exception as e:

@@ -91,7 +91,9 @@ class TTSManager:
         if self._active_mode == "cloud":
             try:
                 chunk = await self.edge_provider.synthesize_chunk(text, emotion=emotion)
-                if chunk.data:
+                if chunk.stages:
+                    self.last_debug_stages.update(chunk.stages)
+                elif chunk.data:
                     self.last_debug_stages["stage1_raw.wav"] = chunk.data
                     self.last_debug_stages["stage5_final.wav"] = chunk.data
                 return chunk
@@ -103,7 +105,9 @@ class TTSManager:
                 if self.fallback_enabled:
                     self._active_mode = "local"
                     local_chunk = await self.local_provider.synthesize_chunk(text, emotion=emotion)
-                    if local_chunk.data:
+                    if local_chunk.stages:
+                        self.last_debug_stages.update(local_chunk.stages)
+                    elif local_chunk.data:
                         self.last_debug_stages["stage1_raw.wav"] = local_chunk.data
                         self.last_debug_stages["stage5_final.wav"] = local_chunk.data
                     return local_chunk
@@ -111,7 +115,9 @@ class TTSManager:
 
         # Local provider
         chunk = await self.local_provider.synthesize_chunk(text, emotion=emotion)
-        if chunk.data:
+        if chunk.stages:
+            self.last_debug_stages.update(chunk.stages)
+        elif chunk.data:
             self.last_debug_stages["stage1_raw.wav"] = chunk.data
             self.last_debug_stages["stage5_final.wav"] = chunk.data
         return chunk
@@ -123,7 +129,9 @@ class TTSManager:
         if self._active_mode == "cloud":
             try:
                 async for chunk in self.edge_provider.stream_synthesize(text, emotion=emotion):
-                    if chunk.data:
+                    if chunk.stages:
+                        self.last_debug_stages.update(chunk.stages)
+                    elif chunk.data:
                         self.last_debug_stages["stage1_raw.wav"] = chunk.data
                         self.last_debug_stages["stage5_final.wav"] = chunk.data
                     yield chunk
@@ -137,7 +145,9 @@ class TTSManager:
                     self._active_mode = "local"
 
         async for chunk in self.local_provider.stream_synthesize(text, emotion=emotion):
-            if chunk.data:
+            if chunk.stages:
+                self.last_debug_stages.update(chunk.stages)
+            elif chunk.data:
                 self.last_debug_stages["stage1_raw.wav"] = chunk.data
                 self.last_debug_stages["stage5_final.wav"] = chunk.data
             yield chunk
