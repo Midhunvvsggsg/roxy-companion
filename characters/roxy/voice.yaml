@@ -2,13 +2,13 @@ provider: cloud
 pinned: true
 fallback_to_local: false
 engine: edge-tts
-voice_id: en-US-AnaNeural
-preset: teen_anime_girl
+voice_id: en-US-JennyNeural
+preset: anime_american_girl
 speed: 1.15
-pitch: 3.0
+pitch: -4.0
 lang: en-US
-pause_comma_ms: 75
-pause_sentence_ms: 160
+pause_comma_ms: 100
+pause_sentence_ms: 250
 trim_silence: true
 emotion_pace:
   neutral: 1.0
