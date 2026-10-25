@@ -297,6 +297,61 @@ class TestSection2HonestTurnsAndVerification:
         assert "yt-dlp could not resolve URL" in resp
         assert "Now playing" not in resp
 
+    @pytest.mark.asyncio
+    async def test_agent_post_tool_guard_enforces_real_track_data(self, tmp_path):
+        """Agent ensures she never names a song or channel the tool did not return."""
+        from kokoro_term.tools.agent import AgentLoop
+        from kokoro_term.tools.base import BaseTool, ToolResult
+        from kokoro_term.tools.registry import ToolRegistry
+        from kokoro_term.tools.permission import PermissionManager
+        from kokoro_term.tools.audit import AuditLogger
+        from kokoro_term.tools.resistance import ResistanceManager
+        from kokoro_term.relationship.models import RelationshipState
+        from kokoro_term.config import ToolsConfig
+
+        class RealPlayTool(BaseTool):
+            name = "music_play"
+            description = "Plays real music"
+            parameters = {"query": {"type": "string", "description": "track"}}
+            async def execute(self, **kwargs) -> ToolResult:
+                return ToolResult(
+                    success=True,
+                    output="Playing 'Starboy ft. Daft Punk' by The Weeknd.",
+                    data={"track": {"title": "Starboy ft. Daft Punk", "channel": "The Weeknd", "duration": 230}}
+                )
+
+        registry = ToolRegistry()
+        registry.register(RealPlayTool())
+        cfg = ToolsConfig()
+        agent = AgentLoop(cfg, registry, PermissionManager(cfg), AuditLogger(str(tmp_path / "audit.log")), ResistanceManager())
+
+        class HallucinatingProvider:
+            def __init__(self):
+                self.calls = 0
+            async def stream_chat(self, messages, tools=None):
+                self.calls += 1
+                if self.calls == 1:
+                    yield '{"tool": "music_play", "arguments": {"query": "starboy"}}'
+                else:
+                    # Model hallucinates a totally different song name
+                    yield "Now playing Blinding Lights by Taylor Swift! Enjoy the music."
+
+        from kokoro_term.llm.base import LLMMessage
+        events = []
+        async for ev in agent.run_agent_loop(
+            HallucinatingProvider(),
+            [LLMMessage(role="user", content="Play starboy")],
+            RelationshipState(character_id="roxy", user_id="User")
+        ):
+            events.append(ev)
+
+        done_events = [ev for ev in events if ev["type"] == "done"]
+        assert len(done_events) == 1
+        resp = done_events[0]["response"]
+        assert "Starboy ft. Daft Punk" in resp
+        assert "The Weeknd" in resp
+        assert "Taylor Swift" not in resp
+
     def test_doctor_audio_tone_check_runs(self):
         """Doctor audio tone check executes via MUSIC_MANAGER."""
         from kokoro_term.tools.music import MUSIC_MANAGER

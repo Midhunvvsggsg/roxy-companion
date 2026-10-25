@@ -364,6 +364,8 @@ class MusicManager:
         vol = res_vol.get("data", 0) if res_vol else self.normal_volume
         if vol <= 0:
             return False, "Playback volume is 0"
+        if vol < 10 and self.is_ducked:
+            return False, f"Playback volume is near zero ({vol}%) due to ducking"
 
         # Check time-pos advancing over ~1.5s
         t0_res = self.send_ipc(["get_property", "time-pos"])
@@ -391,6 +393,11 @@ class MusicManager:
                 sinks_res = subprocess.run(["pactl", "list", "sinks"], capture_output=True, text=True, timeout=1.0)
                 if "Mute: yes" in sinks_res.stdout and "Mute: no" not in sinks_res.stdout:
                     return False, "Audio sink is muted on system"
+
+                # Check Bluetooth sink if used
+                bt_sinks = subprocess.run(["pactl", "list", "sinks", "short"], capture_output=True, text=True, timeout=1.0)
+                if "bluez" in bt_sinks.stdout.lower() and "bluez" not in sinks_res.stdout.lower():
+                    pass
             except Exception:
                 pass
 

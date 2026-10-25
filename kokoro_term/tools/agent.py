@@ -46,6 +46,10 @@ SUCCESS_PATTERNS = [
     r"\bhere you go\b",
     r"\bhere is\b",
     r"\bstreaming\b",
+    r"\bplay(?:ing|ed)?\s+now\b",
+    r"\bsong\s+is\s+playing\b",
+    r"\benjoy\s+the\s+(?:music|song|track)\b",
+    r"\bput\s+on\b",
 ]
 
 
@@ -435,13 +439,35 @@ class AgentLoop:
             # 2. Check for tool calls
             tool_calls = self.parse_tool_calls(full_response)
             if not tool_calls:
-                # Post-tool response guard: if prior tools failed, block false success wording
+                # Post-tool response guard:
                 if executed_tool_results:
+                    # 1. If prior tools failed, block false success wording
                     failed_tools = [(t_name, res) for (t_name, succ, res) in executed_tool_results if not succ]
                     if failed_tools and contains_premature_success_wording(full_response):
                         failed_name, failed_res = failed_tools[-1]
                         err_detail = failed_res.error or failed_res.detail or "Execution failed"
                         full_response = f"I wasn't able to {failed_name.replace('_', ' ')}: {err_detail}."
+
+                    # 2. If music_play succeeded: ensure she never names a song or channel the tool did not return
+                    succ_music = [(t_name, res) for (t_name, succ, res) in executed_tool_results if succ and t_name == "music_play"]
+                    if succ_music:
+                        _, music_res = succ_music[-1]
+                        track_info = {}
+                        if music_res.data and isinstance(music_res.data, dict):
+                            track_info = music_res.data.get("track", {})
+                        if not track_info and hasattr(music_res, "structured") and isinstance(music_res.structured, dict):
+                            track_info = music_res.structured.get("track", {})
+
+                        real_title = track_info.get("title", "")
+                        real_channel = track_info.get("channel", "")
+
+                        if real_title and contains_premature_success_wording(full_response):
+                            # Verify that the response mentions the real track or channel
+                            clean_t = re.sub(r"\(.*?\)|\[.*?\]", "", real_title).strip().lower()
+                            has_title_match = any(w in full_response.lower() for w in clean_t.split() if len(w) > 3)
+                            has_channel_match = real_channel.lower() in full_response.lower() if real_channel else False
+                            if not has_title_match and not has_channel_match:
+                                full_response = f"Now playing '{real_title}' by {real_channel}."
 
                 yield {"type": "done", "response": full_response}
                 return
