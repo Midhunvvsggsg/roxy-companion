@@ -141,6 +141,18 @@ def run_doctor_checks() -> dict[str, Any]:
         all_passed = False
     checks.append({"name": "microphone", "ok": mic_ok, "detail": detail, "fix": fix})
 
+    # 7. 1-second Tone mpv Playback Check confirmed on sink
+    from kokoro_term.tools.music import MUSIC_MANAGER
+    tone_res = MUSIC_MANAGER.doctor_audio_tone_check()
+    checks.append({
+        "name": "audio_sink_tone",
+        "ok": tone_res.get("ok", False),
+        "detail": tone_res.get("detail", ""),
+        "fix": "" if tone_res.get("ok") else "Check PipeWire/PulseAudio output devices and un-mute sinks.",
+    })
+    if not tone_res.get("ok", False):
+        all_passed = False
+
     return {
         "passed": all_passed,
         "checks": checks,

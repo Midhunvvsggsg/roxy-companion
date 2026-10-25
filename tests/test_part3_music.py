@@ -208,3 +208,100 @@ class TestMusicToolsExecution:
             assert "<<<UNTRUSTED_EXTERNAL_DATA" in res.output
             assert "<<</UNTRUSTED_EXTERNAL_DATA>>>" in res.output
             assert "source=\"youtube_search\"" in res.output
+
+
+class TestSection2HonestTurnsAndVerification:
+    def test_track_ranking_prefers_official_and_topic(self):
+        """Track ranking prefers official audio and Topic channels over live/cover/remix."""
+        mgr = MusicManager()
+        candidates = [
+            {"title": "Starboy (Live from Paris)", "channel": "FanCam", "duration": 220, "url": "url1", "id": "1"},
+            {"title": "Starboy (Acoustic Cover)", "channel": "CoverSinger", "duration": 200, "url": "url2", "id": "2"},
+            {"title": "Starboy (Slowed + Reverb)", "channel": "LoFiVibes", "duration": 250, "url": "url3", "id": "3"},
+            {"title": "The Weeknd - Starboy (Official Music Video)", "channel": "TheWeekndVEVO", "duration": 230, "url": "url4", "id": "4"},
+            {"title": "Starboy", "channel": "The Weeknd - Topic", "duration": 230, "url": "url5", "id": "5"},
+        ]
+        ranked = mgr.rank_tracks(candidates, "the weeknd starboy")
+        assert len(ranked) == 5
+        top_titles = [r["title"] for r in ranked[:2]]
+        assert "Starboy" in top_titles[0] or "Starboy" in top_titles[1]
+        assert ranked[0]["channel"] in ("TheWeekndVEVO", "The Weeknd - Topic")
+        assert ranked[1]["channel"] in ("TheWeekndVEVO", "The Weeknd - Topic")
+        # Cover and Live and Slowed should be at the bottom
+        bottom_titles = [r["title"] for r in ranked[2:]]
+        assert "Starboy (Live from Paris)" in bottom_titles
+        assert "Starboy (Acoustic Cover)" in bottom_titles
+        assert "Starboy (Slowed + Reverb)" in bottom_titles
+
+    def test_contains_premature_success_wording(self):
+        """Guard correctly flags premature success claims before tool results are known."""
+        from kokoro_term.tools.agent import contains_premature_success_wording
+
+        assert contains_premature_success_wording("Sure, now playing Starboy by The Weeknd!") is True
+        assert contains_premature_success_wording("Playing that for you right now.") is True
+        assert contains_premature_success_wording("Started playing the requested track.") is True
+        assert contains_premature_success_wording("Done! Here is your song.") is True
+        assert contains_premature_success_wording("I opened the browser for you.") is True
+
+        assert contains_premature_success_wording("Searching for Starboy on YouTube...") is False
+        assert contains_premature_success_wording("Let me see what I can find.") is False
+        assert contains_premature_success_wording("Looking into that now.") is False
+
+    @pytest.mark.asyncio
+    async def test_agent_post_tool_guard_blocks_false_success(self, tmp_path):
+        """Agent replaces false success claim if tool execution failed."""
+        from kokoro_term.tools.agent import AgentLoop
+        from kokoro_term.tools.base import BaseTool, ToolResult
+        from kokoro_term.tools.registry import ToolRegistry
+        from kokoro_term.tools.permission import PermissionManager
+        from kokoro_term.tools.audit import AuditLogger
+        from kokoro_term.tools.resistance import ResistanceManager
+        from kokoro_term.relationship.models import RelationshipState
+        from kokoro_term.config import ToolsConfig
+
+        class FailingPlayTool(BaseTool):
+            name = "music_play"
+            description = "Fails to play"
+            parameters = {"query": {"type": "string", "description": "track"}}
+            async def execute(self, **kwargs) -> ToolResult:
+                return ToolResult(success=False, output="", error="yt-dlp could not resolve URL")
+
+        registry = ToolRegistry()
+        registry.register(FailingPlayTool())
+        cfg = ToolsConfig()
+        agent = AgentLoop(cfg, registry, PermissionManager(cfg), AuditLogger(str(tmp_path / "audit.log")), ResistanceManager())
+
+        class MockProvider:
+            def __init__(self):
+                self.calls = 0
+            async def stream_chat(self, messages, tools=None):
+                self.calls += 1
+                if self.calls == 1:
+                    yield '{"tool": "music_play", "arguments": {"query": "starboy"}}'
+                else:
+                    yield "Now playing Starboy by The Weeknd! Enjoy the music."
+
+        from kokoro_term.llm.base import LLMMessage
+        events = []
+        async for ev in agent.run_agent_loop(
+            MockProvider(),
+            [LLMMessage(role="user", content="Play starboy")],
+            RelationshipState(character_id="roxy", user_id="User")
+        ):
+            events.append(ev)
+
+        done_events = [ev for ev in events if ev["type"] == "done"]
+        assert len(done_events) == 1
+        resp = done_events[0]["response"]
+        assert "wasn't able to" in resp
+        assert "yt-dlp could not resolve URL" in resp
+        assert "Now playing" not in resp
+
+    def test_doctor_audio_tone_check_runs(self):
+        """Doctor audio tone check executes via MUSIC_MANAGER."""
+        from kokoro_term.tools.music import MUSIC_MANAGER
+        res = MUSIC_MANAGER.doctor_audio_tone_check()
+        assert isinstance(res, dict)
+        assert "ok" in res
+        assert "detail" in res
+

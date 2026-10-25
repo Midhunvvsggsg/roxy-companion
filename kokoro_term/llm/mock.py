@@ -32,7 +32,7 @@ class MockProvider(LLMProvider):
         elif "open yt" in last_user_msg or "open youtube" in last_user_msg:
             full_reply = 'On it! <tool_call>{"name": "open_app", "arguments": {"app_name": "youtube"}}</tool_call>'
         elif "play" in last_user_msg and ("song" in last_user_msg or "music" in last_user_msg):
-            full_reply = 'Starting playback. <tool_call>{"name": "youtube_play", "arguments": {"query": "music", "player": "browser"}}</tool_call>'
+            full_reply = 'Starting playback. <tool_call>{"name": "music_play", "arguments": {"query": "lofi hip hop"}}</tool_call>'
         elif "stop the music" in last_user_msg or "stop music" in last_user_msg:
             full_reply = 'Stopping music. <tool_call>{"name": "media_control", "arguments": {"action": "stop"}}</tool_call>'
         elif "hello" in last_user_msg or "hi" in last_user_msg:

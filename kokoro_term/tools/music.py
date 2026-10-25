@@ -137,6 +137,8 @@ class MusicManager:
 
         return None
 
+        self.current_result_index: int = 0
+
     def _ensure_mpv_running(self) -> bool:
         """Start mpv in idle background mode with IPC socket if not already active."""
         if self.proc and self.proc.poll() is None:
@@ -144,16 +146,26 @@ class MusicManager:
 
         self._cleanup_stale_resources()
         gui_env = capture_gui_environment()
+        from pathlib import Path
+        local_bin = str(Path.home() / ".local" / "bin")
+        venv_bin = str(Path(__file__).resolve().parent.parent.parent / ".venv" / "bin")
+        cur_p = gui_env.get("PATH", os.environ.get("PATH", ""))
+        gui_env["PATH"] = f"{local_bin}:{venv_bin}:{cur_p}"
+
+        ytdlp_bin = shutil.which("yt-dlp", path=gui_env["PATH"]) or str(Path(local_bin) / "yt-dlp")
 
         cmd = [
             "mpv",
             "--no-video",
             "--no-terminal",
             "--idle=yes",
+            "--ao=pipewire,pulse",
             f"--input-ipc-server={self.ipc_path}",
             "--ytdl-format=bestaudio/best",
             f"--volume={self.normal_volume}",
         ]
+        if ytdlp_bin and os.path.exists(ytdlp_bin):
+            cmd.append(f"--script-opts=ytdl_hook-ytdl_path={ytdlp_bin}")
 
         try:
             kwargs: dict[str, Any] = {
@@ -184,7 +196,6 @@ class MusicManager:
     def send_ipc(self, command: list[Any]) -> Optional[dict[str, Any]]:
         """Send a JSON command over mpv's IPC socket and return response."""
         if self.system == "windows":
-            # Windows named pipe
             try:
                 with open(self.ipc_path, "r+b", buffering=0) as pipe:
                     req = json.dumps({"command": command}).encode("utf-8") + b"\n"
@@ -217,6 +228,69 @@ class MusicManager:
         except Exception:
             return None
 
+    def rank_tracks(self, query: Any, tracks: Any = None) -> list[dict[str, Any]]:
+        """Rank candidate tracks: preferring official audio/topic channels, duration 1.5-8 min, penalizing live/cover/remix."""
+        if isinstance(query, list):
+            actual_tracks = query
+            actual_query = str(tracks or "")
+        else:
+            actual_query = str(query or "")
+            actual_tracks = tracks or []
+        query = actual_query
+        tracks = actual_tracks
+        clean_q = re.sub(r"\b(play|song|music|track|put on|by|the)\b", "", query, flags=re.IGNORECASE).strip().lower()
+        q_tokens = [t for t in re.split(r"\W+", clean_q) if len(t) > 1]
+
+        low_q = query.lower()
+        allow_live = "live" in low_q
+        allow_cover = "cover" in low_q
+        allow_remix = "remix" in low_q
+        allow_slowed = "slowed" in low_q
+        allow_reverb = "reverb" in low_q
+        allow_reaction = "reaction" in low_q
+        allow_long = any(k in low_q for k in ("mix", "compilation", "album", "hour", "playlist"))
+
+        def score(t: dict[str, Any]) -> float:
+            title = t.get("title", "").lower()
+            channel = t.get("channel", "").lower()
+            dur = t.get("duration", 0)
+
+            s = 0.0
+            if q_tokens:
+                matches = sum(1 for tok in q_tokens if tok in title or tok in channel)
+                s += (matches / len(q_tokens)) * 40.0
+
+            if " - topic" in channel or "official" in channel:
+                s += 25.0
+            if "(audio)" in title or "official audio" in title:
+                s += 30.0
+            elif "official video" in title or "official music video" in title:
+                s += 15.0
+
+            if 90 <= dur <= 480:
+                s += 20.0
+            elif dur < 60:
+                s -= 35.0
+            elif dur > 600 and not allow_long:
+                s -= 30.0
+
+            if not allow_live and "live" in title:
+                s -= 35.0
+            if not allow_cover and "cover" in title:
+                s -= 40.0
+            if not allow_remix and "remix" in title:
+                s -= 25.0
+            if not allow_slowed and "slowed" in title:
+                s -= 30.0
+            if not allow_reverb and "reverb" in title:
+                s -= 30.0
+            if not allow_reaction and "reaction" in title:
+                s -= 50.0
+
+            return s
+
+        return sorted(tracks, key=score, reverse=True)
+
     def search_tracks(self, query: str, limit: int = 5) -> list[dict[str, Any]]:
         """Search YouTube for tracks using yt-dlp."""
         clean_q = query.strip()
@@ -243,7 +317,7 @@ class MusicManager:
 
                 if is_live and not allow_live:
                     continue
-                if dur > 720 and not allow_long:  # Skip videos over ~12 minutes unless mix/long requested
+                if dur > 720 and not allow_long:
                     continue
 
                 results.append({
@@ -256,16 +330,99 @@ class MusicManager:
                 if len(results) >= limit:
                     break
 
-            self.last_search_results = results
-            return results
+            ranked = self.rank_tracks(query, results)
+            self.last_search_results = ranked
+            return ranked
         except Exception as e:
             err_str = str(e)
             if "HTTP Error 429" in err_str or "Sign in to confirm" in err_str:
                 raise RuntimeError(f"YouTube extraction error: {err_str}. Suggest running: pip install -U yt-dlp")
             raise RuntimeError(f"yt-dlp search failed: {err_str}")
 
+    def verify_playback(self, expected_track: dict[str, Any], timeout_sec: float = 3.5) -> tuple[bool, str]:
+        """Verify real playback: media-title loaded, time-pos advancing over ~2s, volume > 0, unpaused, audio stream active on sink."""
+        start_t = time.monotonic()
+        loaded = False
+
+        while time.monotonic() - start_t < timeout_sec:
+            if self.proc and self.proc.poll() is not None:
+                return False, f"mpv exited unexpectedly with code {self.proc.returncode}"
+            res_title = self.send_ipc(["get_property", "media-title"])
+            if res_title and res_title.get("data"):
+                loaded = True
+                break
+            time.sleep(0.2)
+
+        if not loaded:
+            return False, "Timed out waiting for mpv media stream resolution"
+
+        res_pause = self.send_ipc(["get_property", "pause"])
+        if res_pause and res_pause.get("data") is True:
+            return False, "Playback is paused"
+
+        res_vol = self.send_ipc(["get_property", "volume"])
+        vol = res_vol.get("data", 0) if res_vol else self.normal_volume
+        if vol <= 0:
+            return False, "Playback volume is 0"
+
+        # Check time-pos advancing over ~1.5s
+        t0_res = self.send_ipc(["get_property", "time-pos"])
+        t0 = float(t0_res.get("data") or 0.0) if t0_res else 0.0
+
+        time.sleep(1.5)
+
+        t1_res = self.send_ipc(["get_property", "time-pos"])
+        t1 = float(t1_res.get("data") or 0.0) if t1_res else 0.0
+
+        if t1 <= t0 and t0 == 0.0:
+            idle_res = self.send_ipc(["get_property", "idle-active"])
+            if idle_res and idle_res.get("data") is True:
+                return False, "mpv idle-active is true; media failed to decode"
+
+        # Check sink stream via pactl / wpctl on Linux
+        if self.system == "linux":
+            try:
+                sin = subprocess.run(["pactl", "list", "sink-inputs"], capture_output=True, text=True, timeout=1.0)
+                if "application.name = \"mpv\"" not in sin.stdout and "media.name" not in sin.stdout:
+                    wres = subprocess.run(["wpctl", "status"], capture_output=True, text=True, timeout=1.0)
+                    if "mpv" not in wres.stdout:
+                        return False, "No active audio stream found on PipeWire/PulseAudio sink"
+
+                sinks_res = subprocess.run(["pactl", "list", "sinks"], capture_output=True, text=True, timeout=1.0)
+                if "Mute: yes" in sinks_res.stdout and "Mute: no" not in sinks_res.stdout:
+                    return False, "Audio sink is muted on system"
+            except Exception:
+                pass
+
+        return True, "Playback verified successfully"
+
+    def doctor_audio_tone_check(self) -> dict[str, Any]:
+        """Test audio pipeline by playing a 1-second tone through mpv confirmed on audio sink."""
+        system = platform.system().lower()
+        if system != "linux":
+            return {"ok": True, "detail": "Test tone skipped on non-Linux platform"}
+
+        try:
+            gui_env = capture_gui_environment()
+            cmd = ["mpv", "--no-video", "--ao=pipewire,pulse", "av://lavfi:sine=frequency=440:duration=1"]
+            proc = subprocess.Popen(cmd, env=gui_env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            time.sleep(0.3)
+
+            sin = subprocess.run(["pactl", "list", "sink-inputs"], capture_output=True, text=True, timeout=1.5)
+            confirmed = "mpv" in sin.stdout
+            if not confirmed:
+                wres = subprocess.run(["wpctl", "status"], capture_output=True, text=True, timeout=1.5)
+                confirmed = "mpv" in wres.stdout
+
+            proc.wait(timeout=2.0)
+            if confirmed:
+                return {"ok": True, "detail": "1-second tone confirmed active on audio sink"}
+            return {"ok": False, "detail": "1-second tone did not register on audio sink"}
+        except Exception as e:
+            return {"ok": False, "detail": f"Tone playback check failed: {e}"}
+
     def play(self, query: str, queue_mode: bool = False) -> dict[str, Any]:
-        """Resolve query and stream audio via mpv."""
+        """Resolve query and stream audio via mpv with real playback verification."""
         missing = self.check_dependencies()
         if missing:
             return {
@@ -275,15 +432,23 @@ class MusicManager:
                 "install_cmd": missing["install_cmd"],
             }
 
-        # Check for numeric selection from previous search (e.g. 'play the second one')
         track_to_play: Optional[dict[str, Any]] = None
-        m_num = re.search(r'\b(second|third|fourth|fifth|[1-5])\b', query.lower())
-        if self.last_search_results and m_num:
-            word = m_num.group(1)
-            idx_map = {"1": 0, "first": 0, "2": 1, "second": 1, "3": 2, "third": 2, "4": 3, "fourth": 3, "5": 4, "fifth": 4}
-            idx = idx_map.get(word, 0)
-            if idx < len(self.last_search_results):
-                track_to_play = self.last_search_results[idx]
+        low_q = query.lower().strip()
+        is_next = bool(re.search(r"^(?:play\s+)?next(?:\s+result|\s+one|\s+song|\s+track)?$", low_q))
+
+        if is_next and self.last_search_results:
+            self.current_result_index = (self.current_result_index + 1) % len(self.last_search_results)
+            track_to_play = self.last_search_results[self.current_result_index]
+        else:
+            # Check for numeric selection (e.g. 'play the second one')
+            m_num = re.search(r'\b(second|third|fourth|fifth|[1-5])\b', low_q)
+            if self.last_search_results and m_num:
+                word = m_num.group(1)
+                idx_map = {"1": 0, "first": 0, "2": 1, "second": 1, "3": 2, "third": 2, "4": 3, "fourth": 3, "5": 4, "fifth": 4}
+                idx = idx_map.get(word, 0)
+                if idx < len(self.last_search_results):
+                    track_to_play = self.last_search_results[idx]
+                    self.current_result_index = idx
 
         if not track_to_play:
             tracks = self.search_tracks(query, limit=5)
@@ -292,6 +457,8 @@ class MusicManager:
                     "ok": False,
                     "detail": f"No suitable music tracks found for query: '{query}'. Try adding artist name.",
                 }
+            self.last_search_results = tracks
+            self.current_result_index = 0
             track_to_play = tracks[0]
 
         if not self._ensure_mpv_running():
@@ -302,16 +469,31 @@ class MusicManager:
 
         url = track_to_play["url"]
         mode = "append" if queue_mode else "replace"
-        res = self.send_ipc(["loadfile", url, mode])
-
-        # Verify playback started
-        time.sleep(0.3)
+        self.send_ipc(["loadfile", url, mode])
         self.is_paused = False
-        self.current_track = track_to_play
 
-        # Register in Task Registry
+        # Verify real playback before confirming
+        ok, reason = self.verify_playback(track_to_play)
+        if not ok and len(self.last_search_results) > 1 and self.current_result_index == 0:
+            # Try next result once!
+            self.current_result_index = 1
+            track_to_play = self.last_search_results[1]
+            url = track_to_play["url"]
+            self.send_ipc(["loadfile", url, mode])
+            ok, reason = self.verify_playback(track_to_play)
+
+        if not ok:
+            return {
+                "ok": False,
+                "detail": f"Playback verification failed: {reason}",
+                "track": track_to_play,
+            }
+
+        self.current_track = track_to_play
         title = track_to_play["title"]
         channel = track_to_play["channel"]
+
+        # Register in Task Registry
         TASK_REGISTRY.register(
             task_id="task_music_player",
             name=f"Background Music: {title} by {channel}",

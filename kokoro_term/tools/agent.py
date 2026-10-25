@@ -35,6 +35,27 @@ APP_SITE_NAMES = {
     "git", "github", "gitlab", "web", "google", "googl", "news", "reddit", "twitter", "x"
 }
 
+SUCCESS_PATTERNS = [
+    r"\b(?:is|now)\s+playing\b",
+    r"\bplaying\b",
+    r"\bstarted playing\b",
+    r"\bopened\b",
+    r"\bhas been opened\b",
+    r"\bdone\b",
+    r"\bfinished\b",
+    r"\bhere you go\b",
+    r"\bhere is\b",
+    r"\bstreaming\b",
+]
+
+
+def contains_premature_success_wording(text: str) -> bool:
+    """Check if text contains premature success claims before tool results are verified."""
+    clean = re.sub(r"<tool_call(?:\s+[^>]*)?>[\s\S]*?(?:<\/tool_call>|$)", "", text, flags=re.DOTALL | re.IGNORECASE)
+    clean = re.sub(r"```(?:json)?\s*\{[\s\S]*?\}\s*```", "", clean, flags=re.DOTALL | re.IGNORECASE)
+    low = clean.lower()
+    return any(re.search(pat, low) for pat in SUCCESS_PATTERNS)
+
 
 def should_include_tools(message: str) -> bool:
     """Return True if message has action words, app/site names, or is not pure greeting."""
@@ -322,6 +343,7 @@ class AgentLoop:
         """
         conversation = list(messages)
         step = 0
+        executed_tool_results: list[tuple[str, bool, ToolResult]] = []
 
         # Determine if tool schemas should be passed to provider
         last_user_msg = next((m.content for m in reversed(conversation) if m.role == "user"), "")
@@ -369,7 +391,10 @@ class AgentLoop:
                         if start_idx != -1:
                             prefix = stream_buffer[:start_idx]
                             if prefix:
-                                yield {"type": "token", "token": prefix}
+                                if contains_premature_success_wording(prefix):
+                                    yield {"type": "token", "token": "On it! Setting that up...\n"}
+                                else:
+                                    yield {"type": "token", "token": prefix}
                             inside_tool_tag = True
                             stream_buffer = stream_buffer[start_idx:]
                         else:
@@ -379,7 +404,10 @@ class AgentLoop:
                                 if "<tool_call>".startswith(candidate) or candidate.startswith("<tool_call"):
                                     prefix = stream_buffer[:last_lt]
                                     if prefix:
-                                        yield {"type": "token", "token": prefix}
+                                        if contains_premature_success_wording(prefix):
+                                            yield {"type": "token", "token": "On it! Setting that up...\n"}
+                                        else:
+                                            yield {"type": "token", "token": prefix}
                                     stream_buffer = candidate
                                     break
                             if "```" in stream_buffer:
@@ -388,7 +416,10 @@ class AgentLoop:
                                 if "```json".startswith(candidate_tick) or candidate_tick.startswith("```json"):
                                     prefix = stream_buffer[:last_tick]
                                     if prefix:
-                                        yield {"type": "token", "token": prefix}
+                                        if contains_premature_success_wording(prefix):
+                                            yield {"type": "token", "token": "On it! Setting that up...\n"}
+                                        else:
+                                            yield {"type": "token", "token": prefix}
                                     stream_buffer = candidate_tick
                                     break
                             yield {"type": "token", "token": stream_buffer}
@@ -404,7 +435,14 @@ class AgentLoop:
             # 2. Check for tool calls
             tool_calls = self.parse_tool_calls(full_response)
             if not tool_calls:
-                # No more tools called: this is the final verbal response!
+                # Post-tool response guard: if prior tools failed, block false success wording
+                if executed_tool_results:
+                    failed_tools = [(t_name, res) for (t_name, succ, res) in executed_tool_results if not succ]
+                    if failed_tools and contains_premature_success_wording(full_response):
+                        failed_name, failed_res = failed_tools[-1]
+                        err_detail = failed_res.error or failed_res.detail or "Execution failed"
+                        full_response = f"I wasn't able to {failed_name.replace('_', ' ')}: {err_detail}."
+
                 yield {"type": "done", "response": full_response}
                 return
 
@@ -420,6 +458,7 @@ class AgentLoop:
                 tool = self.registry.get(tool_name)
                 if not tool:
                     err_text = f"Tool '{tool_name}' not found in registry."
+                    executed_tool_results.append((tool_name, False, ToolResult(success=False, error=err_text)))
                     wrapped_err = wrap_untrusted_data(err_text, source=f"system:{tool_name}")
                     conversation.append(LLMMessage(role="user", content=f"[Observation from {tool_name}]:\n{wrapped_err}"))
                     yield {"type": "tool_error", "tool": tool_name, "error": err_text}
@@ -455,6 +494,7 @@ class AgentLoop:
                 }
 
                 result = await self.execute_tool(tool, args)
+                executed_tool_results.append((tool_name, result.success, result))
                 out_display = result.output if result.success else f"Error: {result.error}"
 
                 yield {
