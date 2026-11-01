@@ -75,6 +75,12 @@ class WindowAvatarBackend(AvatarBackend):
     def update_emotion(self, emotion: str) -> None:
         self._send_event("emotion", emotion)
 
+    def update_pose(self, pose: str) -> None:
+        self._send_event("pose", pose)
+
+    def set_roam(self, enabled: bool) -> None:
+        self._send_event("roam", enabled)
+
     def set_speaking(self, speaking: bool, lipsync: Optional[LipSyncEngine] = None) -> None:
         self._send_event("speaking", speaking)
 

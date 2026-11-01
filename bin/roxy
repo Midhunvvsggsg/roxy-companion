@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# Roxy Migurdia Companion AI - Single Command Launcher
+# Default: Option 1 (2.5D Animated Companion Studio in Dedicated App Window)
+# Usage:
+#   roxy          -> Launches Option 1 (Dedicated Standalone App Window)
+#   roxy --term   -> Launches Option 2 (Terminal Textual TUI)
+# ==============================================================================
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO_DIR="${KOKORO_DIR:-$SCRIPT_DIR}"
+PYTHON_BIN="${REPO_DIR}/.venv/bin/python"
+if [[ ! -f "$PYTHON_BIN" ]]; then
+    PYTHON_BIN="$(command -v python3)"
+fi
+
+STUDIO_SERVICE="${REPO_DIR}/studio/roxy_service.py"
+if [[ ! -f "$STUDIO_SERVICE" ]]; then
+    STUDIO_SERVICE="/home/midhun/Development/mesh-avatar-studio/tools/roxy_service.py"
+fi
+
+# If user explicitly asked for terminal mode
+if [[ "$1" == "--term" || "$1" == "-t" || "$1" == "term" ]]; then
+    if ! curl -s http://127.0.0.1:11434/api/version >/dev/null 2>&1; then
+        if command -v ollama >/dev/null 2>&1; then
+            ollama serve >/dev/null 2>&1 &
+            sleep 1
+        fi
+    fi
+    cd "$REPO_DIR" || exit 1
+    exec "$PYTHON_BIN" -m kokoro_term "${@:2}"
+fi
+
+# 1. Start Ollama if not running
+if ! curl -s http://127.0.0.1:11434/api/tags >/dev/null 2>&1; then
+    echo "⚡ Starting Ollama server..."
+    ollama serve >/dev/null 2>&1 &
+    for i in {1..20}; do
+        if curl -s http://127.0.0.1:11434/api/tags >/dev/null 2>&1; then
+            break
+        fi
+        sleep 0.4
+    done
+fi
+
+# 2. Start Roxy Companion Service (Option 1) if not running
+if ! curl -s http://127.0.0.1:5174/api/health >/dev/null 2>&1; then
+    echo "🪄 Starting Roxy 2.5D Companion Service..."
+    nohup "$PYTHON_BIN" "$STUDIO_SERVICE" >/dev/null 2>&1 &
+    for i in {1..30}; do
+        if curl -s http://127.0.0.1:5174/api/health >/dev/null 2>&1; then
+            break
+        fi
+        sleep 0.4
+    done
+fi
+
+echo "✨ Roxy Migurdia is live at http://127.0.0.1:5174"
+echo "🚀 Opening standalone companion window..."
+
+# 3. Open in a dedicated standalone app window (NO browser tabs, NO URL bar, NO Brave browser)
+if command -v chromium >/dev/null 2>&1; then
+    chromium --app="http://127.0.0.1:5174" \
+             --user-data-dir="/home/midhun/.cache/roxy_companion_app" \
+             --class="roxy-companion" \
+             --ozone-platform-hint=auto \
+             --window-size=1280,750 >/dev/null 2>&1 &
+elif command -v brave >/dev/null 2>&1; then
+    brave --app="http://127.0.0.1:5174" \
+          --user-data-dir="/home/midhun/.cache/roxy_companion_app" \
+          --class="roxy-companion" \
+          --ozone-platform-hint=auto \
+          --window-size=1280,750 >/dev/null 2>&1 &
+elif command -v xdg-open >/dev/null 2>&1; then
+    xdg-open "http://127.0.0.1:5174" >/dev/null 2>&1 &
+fi

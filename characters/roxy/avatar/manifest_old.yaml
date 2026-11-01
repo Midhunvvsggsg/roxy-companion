@@ -1,0 +1,271 @@
+character: roxy
+canvas_size:
+- 1024
+- 1024
+layers:
+  base:
+    file: layers/base.png
+    z_index: 10
+    offset:
+    - 0
+    - 0
+    size:
+    - 1024
+    - 1024
+    group: base
+  emotion_embarrassed:
+    file: layers/emotion_embarrassed.png
+    z_index: 20
+    offset:
+    - 366
+    - 391
+    size:
+    - 292
+    - 149
+    group: emotion
+  emotion_happy:
+    file: layers/emotion_happy.png
+    z_index: 20
+    offset:
+    - 366
+    - 391
+    size:
+    - 292
+    - 149
+    group: emotion
+  emotion_thinking:
+    file: layers/emotion_thinking.png
+    z_index: 20
+    offset:
+    - 390
+    - 366
+    size:
+    - 262
+    - 92
+    group: emotion
+  blush:
+    file: layers/blush.png
+    z_index: 15
+    offset:
+    - 0
+    - 0
+    size:
+    - 1024
+    - 1024
+    group: overlay
+  sweat:
+    file: layers/sweat.png
+    z_index: 15
+    offset:
+    - 0
+    - 0
+    size:
+    - 1024
+    - 1024
+    group: overlay
+  hair_front:
+    file: layers/hair_front.png
+    z_index: 40
+    offset:
+    - 0
+    - 0
+    size:
+    - 1024
+    - 1024
+    group: overlay
+eye_states:
+  closed:
+    file: layers/eyes_closed.png
+    z_index: 20
+    offset:
+    - 390
+    - 391
+    size:
+    - 243
+    - 65
+    group: eyes
+  half:
+    file: layers/eyes_half.png
+    z_index: 20
+    offset:
+    - 390
+    - 391
+    size:
+    - 243
+    - 67
+    group: eyes
+  open:
+    file: layers/eyes_open.png
+    z_index: 20
+    offset:
+    - 0
+    - 0
+    size:
+    - 1024
+    - 1024
+    group: eyes
+brow_states:
+  angry:
+    file: layers/brows_angry.png
+    z_index: 20
+    offset:
+    - 399
+    - 374
+    size:
+    - 225
+    - 27
+    group: brows
+  sad:
+    file: layers/brows_sad.png
+    z_index: 20
+    offset:
+    - 399
+    - 374
+    size:
+    - 225
+    - 27
+    group: brows
+  surprised:
+    file: layers/brows_surprised.png
+    z_index: 20
+    offset:
+    - 399
+    - 355
+    size:
+    - 225
+    - 40
+    group: brows
+  neutral:
+    file: layers/brows_neutral.png
+    z_index: 21
+    offset:
+    - 0
+    - 0
+    size:
+    - 1024
+    - 1024
+    group: brows
+mouth_states:
+  a:
+    file: layers/mouth_a.png
+    z_index: 20
+    offset:
+    - 485
+    - 510
+    size:
+    - 53
+    - 38
+    group: mouth
+  e:
+    file: layers/mouth_e.png
+    z_index: 20
+    offset:
+    - 484
+    - 513
+    size:
+    - 56
+    - 29
+    group: mouth
+  i:
+    file: layers/mouth_i.png
+    z_index: 20
+    offset:
+    - 481
+    - 517
+    size:
+    - 61
+    - 23
+    group: mouth
+  o:
+    file: layers/mouth_o.png
+    z_index: 20
+    offset:
+    - 491
+    - 509
+    size:
+    - 41
+    - 39
+    group: mouth
+  u:
+    file: layers/mouth_u.png
+    z_index: 20
+    offset:
+    - 491
+    - 515
+    size:
+    - 41
+    - 25
+    group: mouth
+  closed:
+    file: layers/mouth_closed.png
+    z_index: 22
+    offset:
+    - 0
+    - 0
+    size:
+    - 1024
+    - 1024
+    group: mouth
+emotions:
+  neutral:
+    eyes: open
+    brows: neutral
+    mouth: closed
+    blush: false
+    overlays: []
+  happy:
+    eyes: closed
+    brows: neutral
+    mouth: i
+    blush: true
+    overlays: []
+  embarrassed:
+    eyes: half
+    brows: neutral
+    mouth: u
+    blush: true
+    overlays: []
+  blush:
+    eyes: half
+    brows: neutral
+    mouth: u
+    blush: true
+    overlays: []
+  angry:
+    eyes: open
+    brows: angry
+    mouth: u
+    blush: true
+    overlays: []
+  pout:
+    eyes: open
+    brows: angry
+    mouth: u
+    blush: true
+    overlays: []
+  sad:
+    eyes: half
+    brows: sad
+    mouth: closed
+    blush: false
+    overlays: []
+  surprised:
+    eyes: open
+    brows: surprised
+    mouth: o
+    blush: true
+    overlays: []
+  thinking:
+    eyes: half
+    brows: neutral
+    mouth: closed
+    blush: false
+    overlays:
+    - sweat
+animation:
+  breathing_frequency: 0.25
+  breathing_amplitude_px: 8.0
+  blink_interval_min: 3.0
+  blink_interval_max: 6.0
+  blink_duration: 0.12
+  head_sway_amplitude_px: 4.0

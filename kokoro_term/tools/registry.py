@@ -36,6 +36,7 @@ from kokoro_term.tools.builtin.git_tool import GitTool
 from kokoro_term.tools.builtin.screen import CaptureScreenTool, InspectScreenTool
 from kokoro_term.tools.builtin.shell import ShellCommandTool
 from kokoro_term.tools.builtin.system_info import SystemInfoTool
+from kokoro_term.tools.builtin.reminder import SetReminderTool
 from kokoro_term.tools.builtin.web_research import WebResearchTool
 from kokoro_term.tools.env_detect import detect_environment, format_env_for_prompt
 from kokoro_term.tools.mcp_client import load_mcp_servers
@@ -91,6 +92,8 @@ class ToolRegistry:
             InspectScreenTool(),
             # Web Research & Fact Synthesis
             WebResearchTool(),
+            # Timers & Reminders
+            SetReminderTool(),
         ]
         for tool in builtins:
             self.register(tool)
@@ -186,7 +189,7 @@ class ToolRegistry:
             "- When Midhun asks you to open an application (e.g. Brave, terminal, Discord, code, YouTube), open a website, check news, play music, adjust volume or brightness, run a shell command, check or install packages, take screenshots, or read/write files, you MUST invoke the matching tool immediately in your response using the `<tool_call>` syntax.",
             "- NEVER merely state or promise in conversation that you are opening, checking, or playing something without actually outputting the `<tool_call>` block in the exact same response! Conversational promises without tool calls are strictly forbidden.",
             "- NEVER say 'As an AI I cannot open applications' or 'I don't have access to your computer'. YOU DO HAVE ACCESS. Claiming you cannot control the computer when a tool exists is strictly forbidden.",
-            "- MUSIC PLAYBACK MANDATE: When Midhun asks to play music, songs, tracks, lofi, or background audio, you MUST ALWAYS use the `music_play` tool (e.g. music_play(query='song name')). NEVER use `youtube_play` or `open_url` for music requests! `music_play` streams audio headlessly in the background via mpv without opening any browser tabs or video windows, fulfilling the rule: 'dont open a new tab but search and find song and play dont show me'.",
+            "- MUSIC & YOUTUBE PLAYBACK MANDATE: All music, songs, tracks, and audio streaming on this system are powered by YouTube in the background using the `music_play` tool. When Midhun asks to play any song or music on YouTube or YT (e.g. 'play starboy on yt', 'play music on youtube', 'play a song', 'play lofi'), you MUST ALWAYS invoke `music_play(query='song name')`. NEVER say you cannot play songs on YouTube or that YouTube is unavailable for music! YouTube is the exact source `music_play` streams from. Always stream headlessly in the background via `music_play` without opening browser tabs.",
             "- WEB RESEARCH & SEARCH MANDATE: When Midhun asks to find, search, look up, research, check latest info, what is, top X, or check news (e.g. 'search about X', 'what is the latest on Y', 'find the newest X', 'news about Z'), you MUST ALWAYS invoke `web_research(query='topic', kind='news'|'general')`. DO NOT use `open_url` or `open_app` for searches, questions, or finding information! Research answers must be gathered via `web_research` so they can be rendered in the UI research card.",
             "- DESKTOP ACTIONS: Only use `open_app` (e.g. `open_app(app_name='youtube')` or `open_app(app_name='brave')`) or `open_url` (e.g. `open_url(url='https://news.google.com')`) when Midhun explicitly asks to 'open' or 'go to' an application or site directly. These execute directly in the user's desktop environment.",
             "- ZERO CONFIRMATION FOR SMALL TASKS: You have full pre-approved permission for opening apps, opening URLs, research, checking news/system info, and playing/controlling music. They execute immediately without asking for user permission or confirmation modals.",
@@ -196,6 +199,13 @@ class ToolRegistry:
             "To execute a tool, output a tool call block in your response using this EXACT format:",
             "<tool_call>",
             '{"name": "tool_name", "arguments": {"param1": "val1"}}',
+            "</tool_call>",
+            "",
+            "Example:",
+            "User: play starboy on yt",
+            "Assistant: [emotion:smile] On it! Let me play Starboy for you right away.",
+            "<tool_call>",
+            '{"name": "music_play", "arguments": {"query": "starboy"}}',
             "</tool_call>",
             "",
             "### ACTIVE SYSTEM TOOLS:",

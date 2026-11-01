@@ -18,6 +18,14 @@ class AvatarBackend(ABC):
         """Set the active character emotion."""
         pass
 
+    def update_pose(self, pose: str) -> None:
+        """Set the active body posture / hand gesture."""
+        pass
+
+    def set_roam(self, enabled: bool) -> None:
+        """Enable or disable autonomous screen roaming."""
+        pass
+
     @abstractmethod
     def set_speaking(self, speaking: bool, lipsync: Optional[LipSyncEngine] = None) -> None:
         """Signal speech start/stop and attach lip-sync engine."""

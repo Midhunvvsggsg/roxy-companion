@@ -15,12 +15,14 @@ from kokoro_term.tts.alignment import generate_lipsync_cues
 class LocalTTSProvider(TTSProvider):
     """Offline, private local Text-to-Speech provider.
 
-    Zero network transmission. Supports custom local models (ONNX/Piper/Kokoro)
+    Zero network transmission. Supports local ONNX Kokoro-82M neural TTS
     with a lightweight built-in formant-cadence speech engine fallback.
     """
 
     def __init__(self, voice_config: Optional[VoiceConfig] = None):
         self.voice_config = voice_config or VoiceConfig()
+        from kokoro_term.tts.kokoro_provider import KokoroTTSProvider
+        self._kokoro = KokoroTTSProvider(self.voice_config)
 
     @property
     def provider_mode(self) -> str:
@@ -93,6 +95,14 @@ class LocalTTSProvider(TTSProvider):
         return audio_bytes, word_timings, total_duration
 
     async def synthesize_chunk(self, text: str, emotion: str = "neutral") -> AudioChunk:
+        if hasattr(self, "_kokoro") and self._kokoro.is_available():
+            try:
+                chunk = await self._kokoro.synthesize_chunk(text, emotion=emotion)
+                if chunk.data:
+                    return chunk
+            except Exception:
+                pass
+
         audio_bytes, word_timings, dur = self._synthesize_local_audio(text)
         offset_ms = 0.0
         visemes = generate_lipsync_cues(audio_bytes, text, word_timings=word_timings, offset_ms=offset_ms)
@@ -117,6 +127,18 @@ class LocalTTSProvider(TTSProvider):
         )
 
     async def stream_synthesize(self, text: str, emotion: str = "neutral") -> AsyncIterator[AudioChunk]:
+        if hasattr(self, "_kokoro") and self._kokoro.is_available():
+            try:
+                has_any = False
+                async for chunk in self._kokoro.stream_synthesize(text, emotion=emotion):
+                    if chunk.data:
+                        has_any = True
+                        yield chunk
+                if has_any:
+                    return
+            except Exception:
+                pass
+
         sentences = split_sentences(text)
         for s in sentences:
             chunk = await self.synthesize_chunk(s, emotion=emotion)

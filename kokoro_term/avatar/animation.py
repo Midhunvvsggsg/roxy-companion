@@ -10,30 +10,42 @@ from kokoro_term.avatar.lipsync import LipSyncEngine
 from kokoro_term.avatar.manifest import AnimationConfig
 
 
-EMOTION_TAG_REGEX = re.compile(r"\[emotion:\s*([a-zA-Z0-9_-]+)\s*\]", re.IGNORECASE)
+EMOTION_TAG_REGEX = re.compile(r"\[(?:emotion|motion):\s*([a-zA-Z0-9_-]+)\s*\]", re.IGNORECASE)
+ACTION_TAG_REGEX = re.compile(r"\[(?:action|tool):[^\]]*\]", re.IGNORECASE)
 
 VALID_EMOTIONS = {
     "neutral",
     "happy",
+    "smile",
     "embarrassed",
     "blush",
+    "serious",
+    "shy",
     "angry",
     "pout",
     "sad",
     "surprised",
+    "surprise",
     "thinking",
+    "halfLidded",
+    "dizzy",
+    "smug",
+    "wink",
 }
 
 # Mapping common synonyms
 EMOTION_ALIASES = {
     "flustered": "embarrassed",
-    "annoyed": "angry",
+    "annoyed": "pout",
     "joy": "happy",
     "cheerful": "happy",
     "sorrow": "sad",
     "shock": "surprised",
     "thoughtful": "thinking",
     "pensive": "thinking",
+    "confused": "dizzy",
+    "playful": "smug",
+    "teasing": "smug",
 }
 
 
@@ -58,8 +70,9 @@ def parse_and_strip_emotion_tag(text: str) -> tuple[str, str]:
         else:
             detected_emotion = "neutral"
 
-    # Strip any emotion tags and leading whitespace
-    cleaned_text = EMOTION_TAG_REGEX.sub("", text).strip()
+    # Strip any emotion or action tags and leading whitespace
+    cleaned_text = EMOTION_TAG_REGEX.sub("", text)
+    cleaned_text = ACTION_TAG_REGEX.sub("", cleaned_text).strip()
     return cleaned_text, detected_emotion
 
 
@@ -71,6 +84,7 @@ class AnimationEngine:
 
         self.current_emotion: str = "neutral"
         self.target_emotion: str = "neutral"
+        self.current_pose: str = "normal"
         self.emotion_transition_progress: float = 1.0
 
         # Blinking state
@@ -91,6 +105,9 @@ class AnimationEngine:
         if clean in VALID_EMOTIONS:
             self.current_emotion = clean
             self.target_emotion = clean
+
+    def set_pose(self, pose: str) -> None:
+        self.current_pose = pose.lower().strip()
 
     def set_speaking(self, speaking: bool, lipsync: Optional[LipSyncEngine] = None) -> None:
         self.is_speaking = speaking
@@ -120,11 +137,15 @@ class AnimationEngine:
         breathe_phase = 2.0 * math.pi * self.config.breathing_frequency * now
         offset_y = math.sin(breathe_phase) * self.config.breathing_amplitude_px
 
-        # 2. Speaking head sway
+        # 2. Speaking head sway & Secondary hair physics lag
         offset_x = 0.0
         if self.is_speaking:
             sway_phase = 2.0 * math.pi * 1.8 * (now - self.speaking_start_time)
             offset_x = math.sin(sway_phase) * self.config.head_sway_amplitude_px
+
+        # Dynamic hair physics (inertia lag behind head sway + subtle gentle breeze)
+        hair_phase = breathe_phase - 0.45
+        hair_offset_x = math.sin(hair_phase) * 5.0 + math.sin(now * 1.4) * 1.6
 
         # 3. Autonomous Blinking
         eye_state = "open"
@@ -147,20 +168,21 @@ class AnimationEngine:
                 )
                 eye_state = "open"
 
-        # 4. Lip-sync Mouth Shape
+        # 4. Lip-sync Mouth Shape (Casual natural vowel cycling with cadence)
         if self.mouth_override:
             mouth_state = self.mouth_override
         elif self.is_speaking and self.lipsync_engine:
             playback_t = now - self.speaking_start_time
             mouth_state = self.lipsync_engine.get_mouth_shape(playback_t)
         elif self.is_speaking:
-            # Fallback rhythmic mouth movement if no audio engine attached
-            flap = int((now - self.speaking_start_time) * 8) % 2
-            mouth_state = "a" if flap == 0 else "closed"
+            # Casual natural Japanese vowel cadence with micro-pauses
+            SPEECH_CADENCE = ["a", "u", "i", "e", "a", "o", "closed", "e"]
+            step = int((now - self.speaking_start_time) * 6.0) % len(SPEECH_CADENCE)
+            mouth_state = SPEECH_CADENCE[step]
         else:
             mouth_state = "closed"
 
-        # 5. Overlays & Eyebrows based on emotion
+        # 5. Overlays, Eyebrows & Funny Reactions based on emotion
         brow_state = "neutral"
         blush = False
         overlays = []
@@ -170,7 +192,12 @@ class AnimationEngine:
             brow_state = "neutral"
             if eye_state == "open":
                 eye_state = "half"
-        elif self.current_emotion in ("angry", "pout"):
+        elif self.current_emotion == "pout":
+            brow_state = "angry"
+            blush = True
+            if not self.is_speaking and mouth_state == "closed":
+                mouth_state = "u"
+        elif self.current_emotion == "angry":
             brow_state = "angry"
             blush = True
         elif self.current_emotion == "sad":
@@ -181,6 +208,24 @@ class AnimationEngine:
             brow_state = "surprised"
             if mouth_state == "closed" and not self.is_speaking:
                 mouth_state = "o"
+        elif self.current_emotion == "dizzy":
+            brow_state = "surprised"
+            if eye_state == "open":
+                eye_state = "half"
+            overlays.append("sweat")
+            if mouth_state == "closed" and not self.is_speaking:
+                mouth_state = "o"
+        elif self.current_emotion == "smug":
+            brow_state = "neutral"
+            blush = True
+            if mouth_state == "closed" and not self.is_speaking:
+                mouth_state = "i"
+        elif self.current_emotion == "wink":
+            brow_state = "neutral"
+            eye_state = "half"
+            blush = True
+            if mouth_state == "closed" and not self.is_speaking:
+                mouth_state = "a"
         elif self.current_emotion == "thinking":
             brow_state = "neutral"
             overlays.append("sweat")
@@ -188,7 +233,6 @@ class AnimationEngine:
                 eye_state = "half"
         elif self.current_emotion == "happy":
             blush = True
-            # Keep eyes open so her vibrant anime blue eyes shine in smile
             if mouth_state == "closed" and not self.is_speaking:
                 mouth_state = "a"
 
@@ -201,4 +245,6 @@ class AnimationEngine:
             overlays=overlays,
             offset_y=offset_y,
             offset_x=offset_x,
+            hair_offset_x=hair_offset_x,
+            pose=self.current_pose,
         )

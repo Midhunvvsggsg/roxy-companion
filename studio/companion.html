@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kokoro-Term · Roxy Migurdia</title>
+    <link rel="stylesheet" href="/src/live/companion.css">
+  </head>
+  <body>
+    <div id="companion-app" class="mode-split">
+      <div id="workspace">
+        <!-- 1. Left Terminal Log Pane -->
+        <section id="log-pane">
+          <div id="log-header">┌─ [ Terminal Log · kokoro-term agent ] ─────────────────────────</div>
+          <div id="log-scroll">
+            <div class="log-row system">Kokoro-Term TUI v0.1.0 initialized. Type / to view commands or talk to Roxy.</div>
+            <div class="log-row roxy"><span class="prefix">roxy&gt;</span> Hello! I am Roxy Migurdia, Water King Class Magician. Are you ready for today's lesson?</div>
+          </div>
+        </section>
+
+        <!-- 2. Right Avatar Pane -->
+        <section id="avatar-pane">
+          <div id="avatar-header">
+            <span>┌─ [ Roxy Migurdia · 60 FPS ] ─</span>
+            <span id="layout-indicator">[split]</span>
+          </div>
+
+          <!-- Focus Controls Overlay Bar (always accessible) -->
+          <div id="focus-overlay-bar" class="focus-overlay-bar">
+            <div id="now-playing-chip" class="now-playing-chip hidden" title="Background Music">
+              <span class="music-icon">♪</span>
+              <span id="now-playing-title" class="music-title">No track playing</span>
+              <button id="np-pause-btn" class="np-btn" title="Pause / Resume">⏸</button>
+              <button id="np-stop-btn" class="np-btn" title="Stop Music">⏹</button>
+            </div>
+            <div class="focus-actions">
+              <button id="focus-settings-btn" class="focus-btn" title="Open Settings (Voice, Name, Speed, Devotion)">⚙️ Settings</button>
+              <button id="focus-mic-btn" class="focus-btn" title="Microphone (Space/F2)">🎤</button>
+              <button id="focus-voice-btn" class="focus-btn" title="Voice Mute/Unmute (F3)">🔊</button>
+              <button id="focus-stop-btn" class="focus-btn stop" title="Stop Task (/stop)">⏹ STOP</button>
+              <button id="drawer-toggle-btn" class="focus-btn" title="Chat History (Ctrl+H)">📜 History</button>
+              <button id="view-toggle-btn" class="focus-btn view" title="Switch View Mode (F4)">[View: split]</button>
+            </div>
+          </div>
+
+          <div id="avatar-container">
+            <canvas id="starfield"></canvas>
+            <canvas id="avatar"></canvas>
+            <!-- Subtitle under avatar synced to audio -->
+            <div id="avatar-subtitle" class="avatar-subtitle"></div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Slide-out Chat History Drawer (Focus view Ctrl+H) -->
+      <div id="chat-drawer" class="chat-drawer closed">
+        <div class="drawer-header">
+          <span>📜 Conversation History</span>
+          <button id="drawer-close-btn" class="drawer-close-btn" title="Close (Esc)">✕</button>
+        </div>
+        <div id="drawer-scroll" class="drawer-scroll"></div>
+      </div>
+
+      <!-- Toast Chips Container for Tool Activity -->
+      <div id="toast-container" class="toast-container"></div>
+
+      <!-- Centered Confirmation Overlay Modal (stays visible in all view modes) -->
+      <div id="confirm-overlay" class="confirm-overlay hidden">
+        <div class="confirm-modal">
+          <div class="confirm-modal-header">
+            <span class="shield-icon">🛡️</span>
+            <span id="confirm-modal-title">Permission Required</span>
+          </div>
+          <div class="confirm-modal-body">
+            <p id="confirm-modal-reason">Action requires confirmation.</p>
+            <pre id="confirm-modal-command"></pre>
+            <div id="confirm-typed-wrapper" class="hidden">
+              <label for="confirm-typed-input">Type <span class="highlight">confirm</span> to execute dangerous action:</label>
+              <input type="text" id="confirm-typed-input" placeholder="confirm" autocomplete="off">
+            </div>
+          </div>
+          <div class="confirm-modal-footer">
+            <button id="confirm-deny-btn" class="modal-btn deny">Deny (Esc / n)</button>
+            <button id="confirm-allow-btn" class="modal-btn allow">Allow (y)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Centered Settings Overlay Modal -->
+      <div id="settings-overlay" class="settings-overlay hidden">
+        <div class="settings-modal">
+          <div class="settings-modal-header">
+            <div class="settings-title-group">
+              <span class="settings-icon">⚙️</span>
+              <span class="settings-title-text">Roxy Settings</span>
+            </div>
+            <button id="settings-close-btn" class="settings-close-btn" title="Close (Esc)">✕</button>
+          </div>
+          <div class="settings-modal-body">
+            <!-- 1. Preferred Name -->
+            <div class="setting-item">
+              <div class="setting-label-row">
+                <label for="setting-name-input" class="setting-title">Your Preferred Name</label>
+                <span class="setting-hint">How Roxy addresses you (Saved permanently)</span>
+              </div>
+              <div class="setting-input-group">
+                <input type="text" id="setting-name-input" class="setting-text-input" placeholder="e.g. Sir, Master, Midhun" autocomplete="off" spellcheck="false">
+                <button id="setting-name-save-btn" class="setting-btn-primary">Save Name</button>
+              </div>
+            </div>
+
+            <!-- 2. Voice Model Selection -->
+            <div class="setting-item">
+              <div class="setting-label-row">
+                <label for="setting-voice-select" class="setting-title">Roxy Voice Model</label>
+                <span class="setting-hint">Consented Neural Voices</span>
+              </div>
+              <div class="setting-input-group">
+                <select id="setting-voice-select" class="setting-dropdown">
+                  <optgroup label="✨ Whisper & ASMR Voices (Consented Actors, Soft & Breathy)">
+                    <option value="af_whisper">⭐ af_whisper — Ultimate ASMR Whisper (Nicole 60% + Kore 40%)</option>
+                    <option value="af_nicole">⭐ af_nicole — Nicole (Calm, Breathy American Whisper)</option>
+                    <option value="af_kore">⭐ af_kore — Kore (Quiet, Soothing Soft Whisper)</option>
+                    <option value="bf_lily">⭐ bf_lily — Lily (Delicate, Airy British Whisper)</option>
+                    <option value="af_sky">af_sky — Sky (Ethereal & Breathy American)</option>
+                    <option value="af_river">af_river — River (Tranquil & Peaceful American)</option>
+                    <option value="bf_alice">bf_alice — Alice (Gentle, Quiet British Reader)</option>
+                    <option value="jf_whisper">⭐ jf_whisper — Roxy Anime Whisper (Alpha 55% + Nezumi 45%)</option>
+                    <option value="jf_nezumi">jf_nezumi — Nezumi (Delicate Anime Whisper)</option>
+                    <option value="en-US-AriaWhisper">⭐ en-US-AriaWhisper — Aria (Edge Neural Whisper Mode)</option>
+                    <option value="en-US-JennyWhisper">en-US-JennyWhisper — Jenny (Edge Neural Whisper Mode)</option>
+                  </optgroup>
+                  <optgroup label="🌸 Anime & Japanese Voices">
+                    <option value="jf_alpha">⭐ jf_alpha — Alpha (Japanese Anime Female - Roxy Default)</option>
+                    <option value="jf_tebukuro">jf_tebukuro — Tebukuro (Warm Japanese Female)</option>
+                    <option value="jf_gongitsune">jf_gongitsune — Gongitsune (Japanese Storyteller)</option>
+                    <option value="ja-JP-NanamiNeural">ja-JP-NanamiNeural — Nanami (Polite Japanese Female)</option>
+                  </optgroup>
+                  <optgroup label="💖 Warm & Expressive English Voices">
+                    <option value="af_heart">⭐ af_heart — Heart (Warm, Caring American Female)</option>
+                    <option value="af_bella">af_bella — Bella (Lively & Expressive American)</option>
+                    <option value="bf_emma">bf_emma — Emma (Poised British Mentor)</option>
+                    <option value="en-US-SoniaNeural">en-US-SoniaNeural — Sonia (Gentle Soothing Tutor)</option>
+                    <option value="en-US-AriaNeural">en-US-AriaNeural — Aria (Dynamic American Female)</option>
+                    <option value="en-US-AnaNeural">en-US-AnaNeural — Ana (Youthful Cute Female)</option>
+                    <option value="en-US-JennyNeural">en-US-JennyNeural — Jenny (Conversational American)</option>
+                  </optgroup>
+                </select>
+                <button id="setting-voice-test-btn" class="setting-btn-secondary" title="Listen to voice sample">🔊 Test</button>
+              </div>
+            </div>
+
+            <!-- 3. Voice Speed -->
+            <div class="setting-item">
+              <div class="setting-label-row">
+                <label for="setting-speed-slider" class="setting-title">Speech Speed: <span id="setting-speed-val" class="highlight">1.15x</span></label>
+                <span class="setting-hint">Pacing (0.9x to 1.5x)</span>
+              </div>
+              <div class="setting-slider-container">
+                <input type="range" id="setting-speed-slider" class="setting-slider" min="0.9" max="1.5" step="0.05" value="1.15">
+                <div class="setting-preset-chips">
+                  <button class="preset-chip" data-speed="1.0">1.00x</button>
+                  <button class="preset-chip active" data-speed="1.15">1.15x ⭐</button>
+                  <button class="preset-chip" data-speed="1.25">1.25x</button>
+                  <button class="preset-chip" data-speed="1.35">1.35x</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 4. Devotion & Persona -->
+            <div class="setting-item">
+              <div class="setting-label-row">
+                <label for="setting-devotion-slider" class="setting-title">Devotion Level: <span id="setting-devotion-val" class="magenta">4/10</span></label>
+                <span id="setting-devotion-desc" class="setting-hint">Devoted Possessive Partner (Default)</span>
+              </div>
+              <div class="setting-slider-container">
+                <input type="range" id="setting-devotion-slider" class="setting-slider" min="0" max="10" step="1" value="4">
+              </div>
+            </div>
+
+            <div id="setting-feedback" class="setting-feedback-msg hidden"></div>
+          </div>
+          <div class="settings-modal-footer">
+            <button id="settings-close-footer-btn" class="modal-btn allow">Done</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Bottom Prompt Line -->
+      <footer id="prompt-container">
+        <!-- Slash Command Palette Popover -->
+        <div id="slash-palette" class="hidden"></div>
+        <div id="prompt-prefix">you@roxy:~$</div>
+        <div id="prompt-input-wrapper">
+          <input type="text" id="prompt-input" autocomplete="off" spellcheck="false" autofocus>
+        </div>
+      </footer>
+
+      <!-- 4. Status Bar -->
+      <footer id="status-bar">
+        <div class="status-group">
+          <div class="status-item">[Mood: <span id="mood-val" class="highlight">Neutral</span>]</div>
+          <div class="status-item" id="yandere-status" title="Adjust devotion: /yandere 0-10, /relax">[Devotion: <span id="yandere-val" class="magenta">4/10</span>]</div>
+          <div class="status-item">[Affection: <span id="aff-val" class="yellow">56.0%</span> <span id="aff-bar" class="green">███░░░</span>]</div>
+          <div class="status-item">
+            <button id="mic-btn" class="status-btn" title="Click or hold F2 to speak">
+              <span id="mic-icon">🎤</span>
+              <span id="mic-val">Idle (Space/F2)</span>
+              <span id="mic-level" class="mic-level-meter"><span id="mic-level-fill"></span></span>
+            </button>
+          </div>
+          <button id="voice-mute-btn" class="status-btn" title="Toggle voice speech (F3)">🔊 Voice: ON</button>
+          <button id="voice-mode-btn" class="status-btn" title="Toggle voice engine: /voice provider [local|edge]"><span id="voice-mode-val" class="cyan">[Voice: local]</span></button>
+          <button id="settings-btn" class="status-btn" title="Open Settings (Voice, Name, Speed, Devotion)">⚙️ Settings</button>
+          <button id="grant-mic-btn" class="status-btn grant-btn hidden" title="Request Browser Microphone Permission">Grant Mic</button>
+          <button id="enable-audio-btn" class="status-btn audio-btn hidden" title="Click to allow audio playback">🔊 Enable Audio</button>
+        </div>
+        <div class="status-group">
+          <button id="stop-btn" class="status-btn stop-btn" title="Cancel running task (/stop)">⏹ STOP</button>
+          <div class="status-item">[Task: <span id="task-val" class="val">Idle</span>]</div>
+          <div class="status-item">[Model: <span class="val">Roxy-2.5D</span>]</div>
+          <div class="status-item">[<span id="fps-val" class="green">60</span> FPS]</div>
+        </div>
+      </footer>
+    </div>
+    <script type="module" src="/src/live/companion.ts"></script>
+  </body>
+</html>

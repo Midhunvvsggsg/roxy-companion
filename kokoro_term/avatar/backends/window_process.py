@@ -36,21 +36,65 @@ class PySideAvatarWidget(QWidget):
 
         self.setFixedSize(420, 420)
         self._drag_pos = QPoint()
+        self.roam_enabled: bool = True
+        self._is_dragging: bool = False
+        self._wander_dir: int = 1
 
         # Animation timer (24 FPS max)
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.on_animation_tick)
         self.timer.start(41) # ~24 FPS
 
+        # Gentle screen roaming / wander timer (every 18 seconds)
+        self.roam_timer = QTimer(self)
+        self.roam_timer.timeout.connect(self.on_roam_step)
+        self.roam_timer.start(18000)
+
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.LeftButton:
+            self._is_dragging = True
             self._drag_pos = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            # If clicked in upper head region, trigger head-pat reaction!
+            pos_y = event.position().y()
+            if pos_y < 180:
+                import random
+                reaction = random.choice(["blush", "happy", "smug"])
+                self.animation.set_emotion(reaction)
             event.accept()
+
+    def mouseReleaseEvent(self, event: QMouseEvent):
+        self._is_dragging = False
+        event.accept()
 
     def mouseMoveEvent(self, event: QMouseEvent):
         if event.buttons() == Qt.MouseButton.LeftButton:
             self.move(event.globalPosition().toPoint() - self._drag_pos)
             event.accept()
+
+    def on_roam_step(self):
+        """Gentle autonomous desktop pet roaming step across screen."""
+        if not self.roam_enabled or self._is_dragging or self.animation.is_speaking:
+            return
+
+        screen = self.screen()
+        if not screen:
+            return
+        geo = screen.geometry()
+        cur_pos = self.pos()
+
+        # Step 25-45 pixels in current wander direction
+        step = 35 * self._wander_dir
+        new_x = cur_pos.x() + step
+
+        # Bounce if near screen boundaries
+        if new_x <= geo.left() + 20:
+            self._wander_dir = 1
+            new_x = geo.left() + 30
+        elif new_x + self.width() >= geo.right() - 20:
+            self._wander_dir = -1
+            new_x = geo.right() - self.width() - 30
+
+        self.move(new_x, cur_pos.y())
 
     def on_animation_tick(self):
         self.update()
@@ -93,6 +137,10 @@ def run_ipc_server(avatar_widget: PySideAvatarWidget, port: int):
 
                         if msg_type == "emotion" and isinstance(val, str):
                             avatar_widget.animation.set_emotion(val)
+                        elif msg_type == "pose" and isinstance(val, str):
+                            avatar_widget.animation.set_pose(val)
+                        elif msg_type == "roam":
+                            avatar_widget.roam_enabled = bool(val)
                         elif msg_type == "speaking":
                             avatar_widget.animation.set_speaking(bool(val))
                         elif msg_type == "mouth" and isinstance(val, str):

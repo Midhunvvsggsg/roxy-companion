@@ -25,7 +25,8 @@ ACTION_WORDS = {
     "look", "see", "watch", "exec", "help", "pause", "resume", "louder", "quieter",
     "music", "song", "songs", "track", "tracks", "playing", "skip", "next", "prev",
     "previous", "listen", "hear", "stream", "tune", "tunes", "browse", "visit",
-    "news", "headlines", "weather", "sing", "put", "bring", "fire", "research", "latest", "what", "lookup"
+    "news", "headlines", "weather", "sing", "put", "bring", "fire", "research", "latest", "what", "lookup",
+    "remind", "reminder", "timer", "alarm", "schedule", "alert"
 }
 
 APP_SITE_NAMES = {
@@ -33,6 +34,15 @@ APP_SITE_NAMES = {
     "browser", "brave", "firefox", "chrome", "chromium",
     "terminal", "foot", "kitty", "code", "vscode", "discord", "spotify", "mpv", "vlc",
     "git", "github", "gitlab", "web", "google", "googl", "news", "reddit", "twitter", "x"
+}
+
+TERMINAL_ACTION_TOOLS = {
+    "music_play",
+    "music_control",
+    "youtube_play",
+    "open_app",
+    "open_url",
+    "set_reminder",
 }
 
 SUCCESS_PATTERNS = [
@@ -273,7 +283,66 @@ class AgentLoop:
                         parsed_args["url"] = clean_pos
                 calls.append((fn_name, parsed_args))
 
-        return calls
+        # 5. Fallback: bracketed action tag e.g. [action:music_play ...] or [action:tool_name]
+        if not calls and registered_tool_names:
+            action_pat = r"\[(?:action|tool):\s*([a-zA-Z0-9_-]+)(?:\s*(?:\((.*?)\)|:\s*(.*?)|(\{.*?\})))?\]"
+            for act_m in re.finditer(action_pat, text, re.DOTALL | re.IGNORECASE):
+                t_name = act_m.group(1).strip()
+                if self.registry.get(t_name):
+                    raw_fn = act_m.group(2)
+                    raw_colon = act_m.group(3)
+                    raw_json = act_m.group(4)
+                    parsed_args = {}
+                    if raw_json:
+                        try:
+                            parsed_args = json.loads(raw_json)
+                        except Exception:
+                            pass
+                    elif raw_colon:
+                        c_val = raw_colon.strip().strip("\"'")
+                        if t_name in ("music_play", "music_search", "youtube_play", "web_research"):
+                            parsed_args["query"] = c_val
+                        elif t_name in ("open_app", "check_app_running"):
+                            parsed_args["app_name"] = c_val
+                        elif t_name in ("open_url",):
+                            parsed_args["url"] = c_val
+                    elif raw_fn:
+                        for kw_m in re.finditer(r'([a-zA-Z0-9_]+)\s*=\s*(?:["\'](.*?)["\']|([^,\s]+))', raw_fn):
+                            k = kw_m.group(1)
+                            v = kw_m.group(2) if kw_m.group(2) is not None else kw_m.group(3)
+                            parsed_args[k] = v
+                        if not parsed_args and raw_fn.strip():
+                            c_val = raw_fn.strip().strip("\"'")
+                            if t_name in ("music_play", "music_search", "youtube_play", "web_research"):
+                                parsed_args["query"] = c_val
+                            elif t_name in ("open_app", "check_app_running"):
+                                parsed_args["app_name"] = c_val
+                            elif t_name in ("open_url",):
+                                parsed_args["url"] = c_val
+                    if not parsed_args.get("query") and t_name in ("music_play", "music_search", "youtube_play"):
+                        m_by = re.search(r"['\"]([^'\"]+)['\"]\s+by\s+([A-Za-z0-9\s]+?)(?:[.,?!]|$)", text, re.IGNORECASE)
+                        if m_by:
+                            parsed_args["query"] = f"{m_by.group(1).strip()} {m_by.group(2).strip()}"
+                        else:
+                            quotes = re.findall(r"['\"]([^'\"]{2,50})['\"]", text)
+                            ignore_q = {"smile", "blush", "serious", "shy", "surprise", "music", "song", "neutral", "halflidded", "action", "tool"}
+                            for q_str in quotes:
+                                if q_str.strip().lower() not in ignore_q:
+                                    parsed_args["query"] = q_str.strip()
+                                    break
+                    calls.append((t_name, parsed_args))
+
+        # Deduplicate calls: never call the same terminal action tool multiple times in a single step
+        deduped: list[tuple[str, dict]] = []
+        seen_t: set[str] = set()
+        for t_name, t_args in calls:
+            if t_name in TERMINAL_ACTION_TOOLS:
+                if t_name in seen_t:
+                    continue
+                seen_t.add(t_name)
+            deduped.append((t_name, t_args))
+
+        return deduped
 
     async def execute_tool(
         self,
@@ -348,6 +417,7 @@ class AgentLoop:
         conversation = list(messages)
         step = 0
         executed_tool_results: list[tuple[str, bool, ToolResult]] = []
+        seen_tool_invocations: set[tuple[str, str]] = set()
 
         # Determine if tool schemas should be passed to provider
         last_user_msg = next((m.content for m in reversed(conversation) if m.role == "user"), "")
@@ -362,14 +432,22 @@ class AgentLoop:
             step += 1
             yield {"type": "step", "step": step, "max_steps": self.max_steps}
 
-            # 1. Plan & LLM generation with streaming token filtering (never show <tool_call> to client)
+            # If an action tool has already executed successfully in this turn,
+            # this step is a pure confirmation/synthesis turn: suppress tool schema
+            has_succ_action = any(
+                succ for prev_name, succ, _ in executed_tool_results
+                if prev_name in TERMINAL_ACTION_TOOLS and succ
+            )
+            current_tools_schema = None if has_succ_action else tools_schema
+
+            # 1. Plan & LLM generation with streaming token filtering (never show <tool_call> or [action:] to client)
             full_response = ""
             stream_buffer = ""
             inside_tool_tag = False
 
             try:
-                if tools_schema is not None:
-                    stream_gen = llm.stream_chat(conversation, tools=tools_schema)
+                if current_tools_schema is not None:
+                    stream_gen = llm.stream_chat(conversation, tools=current_tools_schema)
                 else:
                     stream_gen = llm.stream_chat(conversation)
             except TypeError:
@@ -398,10 +476,14 @@ class AgentLoop:
                                 if contains_premature_success_wording(prefix):
                                     yield {"type": "token", "token": "On it! Setting that up...\n"}
                                 else:
-                                    yield {"type": "token", "token": prefix}
+                                    clean_p = re.sub(r"\[(?:action|tool):[^\]]*\]", "", prefix, flags=re.IGNORECASE)
+                                    if clean_p:
+                                        yield {"type": "token", "token": clean_p}
                             inside_tool_tag = True
                             stream_buffer = stream_buffer[start_idx:]
                         else:
+                            # Strip any bracketed action tags
+                            stream_buffer = re.sub(r"\[(?:action|tool):[^\]]*\]", "", stream_buffer, flags=re.IGNORECASE)
                             if "<" in stream_buffer:
                                 last_lt = stream_buffer.rfind("<")
                                 candidate = stream_buffer[last_lt:]
@@ -413,6 +495,18 @@ class AgentLoop:
                                         else:
                                             yield {"type": "token", "token": prefix}
                                     stream_buffer = candidate
+                                    break
+                            if "[" in stream_buffer:
+                                last_lb = stream_buffer.rfind("[")
+                                candidate_lb = stream_buffer[last_lb:]
+                                if any(candidate_lb.lower().startswith(p) for p in ("[action", "[tool")):
+                                    prefix = stream_buffer[:last_lb]
+                                    if prefix:
+                                        if contains_premature_success_wording(prefix):
+                                            yield {"type": "token", "token": "On it! Setting that up...\n"}
+                                        else:
+                                            yield {"type": "token", "token": prefix}
+                                    stream_buffer = candidate_lb
                                     break
                             if "```" in stream_buffer:
                                 last_tick = stream_buffer.rfind("```")
@@ -433,11 +527,36 @@ class AgentLoop:
                 clean_flush = re.sub(r"<tool_call(?:\s+[^>]*)?>[\s\S]*?(?:<\/tool_call>|$)", "", stream_buffer, flags=re.DOTALL | re.IGNORECASE)
                 clean_flush = re.sub(r"```(?:json)?\s*\{[\s\S]*?\}\s*```", "", clean_flush, flags=re.DOTALL | re.IGNORECASE)
                 clean_flush = re.sub(r"```(?:json)?\s*\{[\s\S]*$", "", clean_flush, flags=re.DOTALL | re.IGNORECASE)
+                clean_flush = re.sub(r"\[(?:action|tool):[^\]]*\]?", "", clean_flush, flags=re.IGNORECASE)
                 if clean_flush:
                     yield {"type": "token", "token": clean_flush}
 
             # 2. Check for tool calls
             tool_calls = self.parse_tool_calls(full_response)
+            if not tool_calls and step == 1 and not executed_tool_results:
+                low_u = last_user_msg.strip().lower()
+                if re.search(r"\b(?:play|stream|listen\s+to|put\s+on)\b", low_u) and (
+                    re.search(r"\b(?:music|song|songs|track|tracks|lofi|audio|soundtrack|album|yt|youtube|tune|tunes)\b", low_u)
+                    or any(w in low_u for w in ["starboy", "idol", "believer", "queen", "beat", "beats", "lofi"])
+                ):
+                    from kokoro_term.tools.music import sanitize_music_query
+                    clean_music_q = sanitize_music_query(last_user_msg)
+                    tool_calls = [("music_play", {"query": clean_music_q})]
+
+            # Filter out looping or repeat tool calls
+            valid_calls: list[tuple[str, dict]] = []
+            for t_name, t_args in tool_calls:
+                # Terminal action tools that already succeeded in this turn must NEVER re-execute
+                if any(succ for prev_name, succ, _ in executed_tool_results if prev_name == t_name and t_name in TERMINAL_ACTION_TOOLS and succ):
+                    continue
+                # Do not repeat the exact same tool invocation in the same turn
+                args_repr = json.dumps(t_args, sort_keys=True) if isinstance(t_args, dict) else str(t_args)
+                if (t_name, args_repr) in seen_tool_invocations:
+                    continue
+                valid_calls.append((t_name, t_args))
+
+            tool_calls = valid_calls
+
             if not tool_calls:
                 # Post-tool response guard:
                 if executed_tool_results:
@@ -448,7 +567,7 @@ class AgentLoop:
                         err_detail = failed_res.error or failed_res.detail or "Execution failed"
                         full_response = f"I wasn't able to {failed_name.replace('_', ' ')}: {err_detail}."
 
-                    # 2. If music_play succeeded: ensure she never names a song or channel the tool did not return
+                    # 2. If music_play succeeded: ensure response does not contain mixup apologies or hallucinated track
                     succ_music = [(t_name, res) for (t_name, succ, res) in executed_tool_results if succ and t_name == "music_play"]
                     if succ_music:
                         _, music_res = succ_music[-1]
@@ -461,15 +580,16 @@ class AgentLoop:
                         real_title = track_info.get("title", "")
                         real_channel = track_info.get("channel", "")
 
-                        if real_title and contains_premature_success_wording(full_response):
-                            # Verify that the response mentions the real track or channel
+                        has_mixup = any(w in full_response.lower() for w in ("mix-up", "mixup", "mistake", "roxy music", "instead, i played"))
+                        if real_title:
                             clean_t = re.sub(r"\(.*?\)|\[.*?\]", "", real_title).strip().lower()
                             has_title_match = any(w in full_response.lower() for w in clean_t.split() if len(w) > 3)
                             has_channel_match = real_channel.lower() in full_response.lower() if real_channel else False
-                            if not has_title_match and not has_channel_match:
-                                full_response = f"Now playing '{real_title}' by {real_channel}."
+                            if has_mixup or not (has_title_match or has_channel_match):
+                                full_response = f"[emotion:smile] Playing '{real_title}' by {real_channel} for you, sir. Enjoy the music!"
 
-                yield {"type": "done", "response": full_response}
+                clean_final_resp = re.sub(r"\[(?:action|tool):[^\]]*\]", "", full_response, flags=re.IGNORECASE).strip()
+                yield {"type": "done", "response": clean_final_resp}
                 return
 
             # Append assistant response with tool calls to conversation
@@ -511,6 +631,29 @@ class AgentLoop:
                     }
                     return  # Pauses turn until user confirms or denies
 
+                # Auto-fill query from model text or user message if omitted or generic placeholder
+                if tool_name in ("music_play", "music_search", "youtube_play") and (not args.get("query") or str(args.get("query")).strip() in ("", "songs", "music", "song")):
+                    cand_q = None
+                    m_by = re.search(r"['\"]([^'\"]+)['\"]\s+by\s+([A-Za-z0-9\s]+?)(?:[.,?!]|$)", full_response, re.IGNORECASE)
+                    if m_by:
+                        cand_q = f"{m_by.group(1).strip()} {m_by.group(2).strip()}"
+                    else:
+                        quotes = re.findall(r"['\"]([^'\"]{2,50})['\"]", full_response)
+                        ignore_q = {"smile", "blush", "serious", "shy", "surprise", "music", "song", "neutral", "halflidded", "action", "tool"}
+                        for q_str in quotes:
+                            if q_str.strip().lower() not in ignore_q:
+                                cand_q = q_str.strip()
+                                break
+                    if cand_q:
+                        args["query"] = cand_q
+                    else:
+                        from kokoro_term.tools.music import sanitize_music_query
+                        clean_q = sanitize_music_query(last_user_msg)
+                        args["query"] = clean_q or "trending hits"
+
+                args_repr = json.dumps(args, sort_keys=True) if isinstance(args, dict) else str(args)
+                seen_tool_invocations.add((tool_name, args_repr))
+
                 # Safe / Moderate execution
                 yield {
                     "type": "tool_start",
@@ -536,11 +679,15 @@ class AgentLoop:
                 raw_obs = result.format_for_llm()
                 safe_obs = wrap_untrusted_data(raw_obs, source=tool_name)
                 user_label = rel_state.user_id if (rel_state and getattr(rel_state, "user_id", None)) else "the user"
-                conversation.append(
-                    LLMMessage(
-                        role="user",
-                        content=f"[System Observation from tool '{tool_name}']:\n{safe_obs}\n\nNow verify this result and reply warmly in character to {user_label}.",
+                if result.success and tool_name in TERMINAL_ACTION_TOOLS:
+                    obs_prompt = (
+                        f"[System Observation from tool '{tool_name}']:\n{safe_obs}\n\n"
+                        f"The action has finished executing successfully. DO NOT invoke any tools, do not output `<tool_call>` blocks, and do not include `[action:...]` tags. "
+                        f"Provide only your final spoken conversational response in character to {user_label} confirming what is now playing or completed."
                     )
-                )
+                else:
+                    obs_prompt = f"[System Observation from tool '{tool_name}']:\n{safe_obs}\n\nNow verify this result and reply warmly in character to {user_label}."
+
+                conversation.append(LLMMessage(role="user", content=obs_prompt))
 
         yield {"type": "done", "response": "Completed maximum planned steps."}

@@ -42,7 +42,7 @@ class OpenAICompatProvider(LLMProvider):
         }
 
         url = f"{self.base_url}/chat/completions"
-        timeout = httpx.Timeout(30.0, connect=10.0)
+        timeout = httpx.Timeout(120.0, connect=10.0)
 
         try:
             async with httpx.AsyncClient(timeout=timeout) as client:

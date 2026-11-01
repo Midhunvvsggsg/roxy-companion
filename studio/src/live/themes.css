@@ -1,0 +1,83 @@
+/* Themes Definition for Kokoro-Term / Roxy Companion */
+:root {
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-size: 14px;
+  --line-height: 1.5;
+  --scanline-opacity: 0.15;
+}
+
+/* Default Theme: foot-dark */
+[data-theme="foot-dark"], :root {
+  --bg-primary: #05060d;
+  --bg-secondary: #0c0e18;
+  --bg-overlay: rgba(5, 6, 13, 0.78);
+  --border-color: #1e2238;
+  --border-highlight: #88c0d0;
+  --text-primary: #d8dee9;
+  --text-secondary: #737c8e;
+  --text-accent: #88c0d0;
+  --text-green: #a3be8c;
+  --text-yellow: #ebcb8b;
+  --text-red: #bf616a;
+  --text-magenta: #b48ead;
+  --cursor-color: #88c0d0;
+  --status-bar-bg: #070810;
+  --star-bg: #05060d;
+}
+
+/* Catppuccin Mocha */
+[data-theme="catppuccin"] {
+  --bg-primary: #1e1e2e;
+  --bg-secondary: #181825;
+  --bg-overlay: rgba(30, 30, 46, 0.82);
+  --border-color: #313244;
+  --border-highlight: #89b4fa;
+  --text-primary: #cdd6f4;
+  --text-secondary: #a6adc8;
+  --text-accent: #89b4fa;
+  --text-green: #a6e3a1;
+  --text-yellow: #f9e2af;
+  --text-red: #f38ba8;
+  --text-magenta: #cba6f7;
+  --cursor-color: #f5e0dc;
+  --status-bar-bg: #11111b;
+  --star-bg: #181825;
+}
+
+/* Gruvbox Dark */
+[data-theme="gruvbox"] {
+  --bg-primary: #282828;
+  --bg-secondary: #1d2021;
+  --bg-overlay: rgba(40, 40, 40, 0.82);
+  --border-color: #3c3836;
+  --border-highlight: #8ec07c;
+  --text-primary: #ebdbb2;
+  --text-secondary: #a89984;
+  --text-accent: #8ec07c;
+  --text-green: #b8bb26;
+  --text-yellow: #fabd2f;
+  --text-red: #fb4934;
+  --text-magenta: #d3869b;
+  --cursor-color: #ebdbb2;
+  --status-bar-bg: #1d2021;
+  --star-bg: #1d2021;
+}
+
+/* Clean Terminal Light */
+[data-theme="light"] {
+  --bg-primary: #f5f6f8;
+  --bg-secondary: #e9ecf2;
+  --bg-overlay: rgba(245, 246, 248, 0.88);
+  --border-color: #d0d7de;
+  --border-highlight: #0969da;
+  --text-primary: #24292f;
+  --text-secondary: #57606a;
+  --text-accent: #0969da;
+  --text-green: #1a7f37;
+  --text-yellow: #9a6700;
+  --text-red: #cf222e;
+  --text-magenta: #8250df;
+  --cursor-color: #24292f;
+  --status-bar-bg: #eaeef2;
+  --star-bg: #e4e7ee;
+}

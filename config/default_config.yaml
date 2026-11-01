@@ -5,10 +5,10 @@ character_dir: "characters"
 
 llm:
   # Providers: "gemini", "openai", "ollama", "mock"
-  provider: "gemini"
-  model: "gemini-flash-lite-latest"
+  provider: "ollama"
+  model: "qwen2.5:3b"
   api_key_env: "GEMINI_API_KEY"
-  base_url: ""
+  base_url: "http://localhost:11434/v1"
   temperature: 0.7
   max_tokens: 1024
 
@@ -40,9 +40,9 @@ avatar:
 voice:
   provider: "local"     # "local" (private offline default) or "edge" (online cloud)
   fallback_enabled: true # Automatically falls back to local if cloud encounters rate-limits or disconnection
-  preset: "mature_mommy_fast"
-  voice: "en-US-AvaNeural"
-  speed: 1.20
+  preset: "japanese_anime_girl"
+  voice: "jf_alpha"
+  speed: 1.15
   base_pitch: -4
   base_rate: 20
   pause_comma_ms: 120

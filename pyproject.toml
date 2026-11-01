@@ -12,6 +12,7 @@ authors = [{ name = "Kokoro-Term Contributors" }]
 license = { text = "MIT" }
 dependencies = [
     "httpx>=0.28.1",
+    "kokoro-onnx>=0.6.1",
     "numpy>=2.5.4",
     "pillow>=13.0.0",
     "pydantic>=2.14.1",
@@ -19,6 +20,7 @@ dependencies = [
     "python-dotenv>=1.2.4",
     "pyyaml>=6.0.3",
     "send2trash>=2.1.0",
+    "soundfile>=0.14.0",
     "textual>=8.2.8",
 ]
 

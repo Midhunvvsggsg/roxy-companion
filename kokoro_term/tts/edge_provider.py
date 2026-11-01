@@ -72,25 +72,39 @@ class EdgeTTSProvider(TTSProvider):
         spoken_text = apply_pronunciation_map(normalized, self.voice_config.pronunciation_map)
         pitch_str, rate_str = self._calculate_prosody(emotion)
         voice = self.voice_config.voice_id or "en-US-AvaNeural"
+        is_whisper = "Whisper" in voice
+        actual_voice = voice.replace("Whisper", "Neural") if is_whisper else voice
 
         audio_data = b""
         word_timings: List[Dict] = []
 
         try:
-            communicate = edge_tts.Communicate(
-                spoken_text,
-                voice,
-                rate=rate_str,
-                pitch=pitch_str,
-                boundary="WordBoundary",
-            )
+            if is_whisper:
+                ssml_text = f"""<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='en-US'>
+<voice name='{actual_voice}'>
+<mstts:express-as style='whispering'>
+<prosody pitch='{pitch_str}' rate='{rate_str}'>
+{spoken_text}
+</prosody>
+</mstts:express-as>
+</voice>
+</speak>"""
+                communicate = edge_tts.Communicate(ssml_text, actual_voice)
+            else:
+                communicate = edge_tts.Communicate(
+                    spoken_text,
+                    actual_voice,
+                    rate=rate_str,
+                    pitch=pitch_str,
+                    boundary="WordBoundary",
+                )
             # Add timeout to fail fast and trigger fallback if network hangs
             async with asyncio.timeout(6.0):
                 async for chunk in communicate.stream():
                     c_type = chunk["type"]
                     if c_type == "audio":
                         audio_data += chunk["data"]
-                    elif c_type == "WordBoundary":
+                    elif c_type == "WordBoundary" and not is_whisper:
                         start_s = round(chunk["offset"] / 10_000_000, 3)
                         dur_s = round(chunk["duration"] / 10_000_000, 3)
                         word_timings.append({

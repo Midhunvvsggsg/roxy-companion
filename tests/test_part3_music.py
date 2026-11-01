@@ -360,3 +360,77 @@ class TestSection2HonestTurnsAndVerification:
         assert "ok" in res
         assert "detail" in res
 
+    def test_sanitize_music_query_companion_address(self):
+        """Ensure companion address and generic song queries do not match Roxy Music."""
+        from kokoro_term.tools.music import sanitize_music_query
+        assert sanitize_music_query("roxy play a song") == "trending hits"
+        assert sanitize_music_query("play a song for me roxy") == "trending hits"
+        assert sanitize_music_query("roxy play believer") == "believer"
+        assert sanitize_music_query("play starboy on yt") == "starboy"
+        assert sanitize_music_query("play roxy music") == "roxy music"
+        assert sanitize_music_query("play something") == "trending hits"
+
+    @pytest.mark.asyncio
+    async def test_agent_loop_prevents_music_infinite_loop(self):
+        """Ensure agent loop does not execute repeat music_play calls or loop indefinitely."""
+        from kokoro_term.tools.agent import AgentLoop
+        from kokoro_term.config import ToolsConfig
+        from kokoro_term.tools.registry import ToolRegistry
+        from kokoro_term.tools.permission import PermissionManager
+        from kokoro_term.tools.audit import AuditLogger
+        from kokoro_term.tools.resistance import ResistanceManager
+        from kokoro_term.llm.base import LLMProvider, LLMMessage
+        from kokoro_term.relationship.models import RelationshipState
+        from kokoro_term.tools.music import MusicPlayTool
+        from kokoro_term.tools.base import ToolResult
+
+        config = ToolsConfig(enabled=True)
+        registry = ToolRegistry()
+        play_tool = MusicPlayTool()
+        # Mock execute on play_tool
+        async def fake_play(query=None, **kwargs):
+            return ToolResult(
+                success=True,
+                output="Playing Believer by Imagine Dragons.",
+                data={"track": {"title": "Believer", "channel": "Imagine Dragons"}}
+            )
+        play_tool.execute = fake_play
+        registry.register(play_tool)
+
+        agent = AgentLoop(
+            config, registry, PermissionManager(config), AuditLogger("/tmp/audit.log"), ResistanceManager()
+        )
+
+        class LoopingProvider(LLMProvider):
+            def __init__(self):
+                self.calls = 0
+
+            async def generate_response(self, messages, tools=None):
+                return ""
+
+            async def stream_chat(self, messages, tools=None):
+                self.calls += 1
+                # On every step, it tries to output another [action:music_play]
+                if self.calls == 1:
+                    yield "Let me play Believer for you! [action:music_play]"
+                else:
+                    yield "Oh, it seems I made a mistake, sir. [action:music_play] Believer is playing now."
+
+        provider = LoopingProvider()
+        events = []
+        async for ev in agent.run_agent_loop(
+            provider,
+            [LLMMessage(role="user", content="roxy play a song")],
+            RelationshipState(character_id="roxy", user_id="User")
+        ):
+            events.append(ev)
+
+        # Tool start events must only occur ONCE!
+        tool_starts = [ev for ev in events if ev.get("type") == "tool_start" and ev.get("tool") == "music_play"]
+        assert len(tool_starts) == 1, f"Expected 1 tool_start, got {len(tool_starts)}"
+
+        done_events = [ev for ev in events if ev.get("type") == "done"]
+        assert len(done_events) == 1
+        resp = done_events[0]["response"]
+        assert "Playing 'Believer' by Imagine Dragons" in resp
+

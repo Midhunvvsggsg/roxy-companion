@@ -584,6 +584,22 @@ class KokoroApp(App):
         pinned = getattr(self.config.voice, "pinned", False) if hasattr(self.config, "voice") and self.config.voice else False
         self.tts = TTSManager(voice_config=self.character.voice, preferred_provider=pref, pinned=pinned)
 
+        # Initialize Emotional Cognition Layer & Autonomous Heartbeat (Option B)
+        from kokoro_term.emotional.cognition import EmotionalCognition
+        from kokoro_term.emotional.heartbeat import AutonomousHeartbeat
+
+        self.emotional_cognition = EmotionalCognition()
+        self.heartbeat = None
+        if self.memory and hasattr(self.memory, "relationship"):
+            self.heartbeat = AutonomousHeartbeat(
+                cognition=self.emotional_cognition,
+                relationship_engine=self.memory.relationship,
+                character_id=self.character.id,
+                user_id=self.user_id,
+                user_name=self.user_id,
+                on_spontaneous_thought=self._handle_spontaneous_thought,
+            )
+
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         with Horizontal(id="main-container"):
@@ -718,17 +734,51 @@ class KokoroApp(App):
             greeting = f"Hello. I am {self.character.name}. How may I assist you in the terminal today?"
             chat_scroll.mount(ChatMessageWidget(sender=self.character.display_name, text=greeting, is_user=False))
 
+        if self.heartbeat:
+            if self.memory:
+                pref = self.memory.get_preferred_name(self.character.id, self.user_id)
+                if pref:
+                    self.heartbeat.user_name = pref
+            self.heartbeat.start()
+
         self.query_one("#user-input", Input).focus()
 
     def on_unmount(self) -> None:
+        if self.heartbeat:
+            try:
+                self.heartbeat.stop()
+            except Exception:
+                pass
+
         if self.avatar_backend:
             try:
                 self.avatar_backend.stop()
             except Exception:
                 pass
 
+    def _handle_spontaneous_thought(self, thought: str, speech: str, expression: str) -> None:
+        """Handle autonomous mind-wandering reflection or proactive speech from heartbeat."""
+        async def _apply():
+            try:
+                avatar_panel = self.query_one("#avatar-panel", AvatarPanel)
+                avatar_panel.set_emotion(expression)
+                if self.avatar_backend:
+                    self.avatar_backend.update_emotion(expression)
+
+                if speech:
+                    chat_scroll = self.query_one("#chat-scroll", VerticalScroll)
+                    display = f"[emotion:{expression}] [dim]({thought})[/dim]\n\n{speech}"
+                    await chat_scroll.mount(ChatMessageWidget(sender=self.character.display_name, text=display, is_user=False))
+                    chat_scroll.scroll_end(animate=False)
+                    if self.memory:
+                        self.memory.add_message(self.character.id, self.user_id, "assistant", speech, emotion=expression)
+            except Exception:
+                pass
+
+        self.call_later(lambda: asyncio.create_task(_apply()))
+
     def _prepare_system_prompt(self, current_user_query: str = "") -> str:
-        """Build the complete system prompt including base personality, memory, relationship, and tools."""
+        """Build the complete system prompt including base personality, memory, emotional mind, and tools."""
         effective_name = self.user_id
         if self.memory:
             pref = self.memory.get_preferred_name(self.character.id, self.user_id)
@@ -742,11 +792,15 @@ class KokoroApp(App):
                 self.character.id, self.user_id, current_query=current_user_query
             )
 
+        emotional_context = ""
+        if hasattr(self, "emotional_cognition"):
+            emotional_context = "\n\n" + self.emotional_cognition.build_prompt_injection()
+
         tools_context = ""
         if self.tools and self.config.tools.enabled:
             tools_context = "\n\n" + self.tools.generate_system_prompt_documentation()
 
-        return base_prompt + memory_context + tools_context
+        return base_prompt + memory_context + emotional_context + tools_context
 
     def action_clear_chat(self) -> None:
         chat_scroll = self.query_one("#chat-scroll", VerticalScroll)
@@ -769,21 +823,53 @@ class KokoroApp(App):
 
         self._last_user_message = user_text
 
+        # Notify autonomous heartbeat of user activity
+        if self.heartbeat:
+            self.heartbeat.notify_user_activity()
+
         # Add user message to UI
         chat_scroll = self.query_one("#chat-scroll", VerticalScroll)
         user_widget = ChatMessageWidget(sender="You", text=user_text, is_user=True)
         await chat_scroll.mount(user_widget)
         chat_scroll.scroll_end(animate=False)
 
-        # Store user message in SQLite memory
+        # Store user message in SQLite memory and detect any preferred name update
         if self.memory:
             self.memory.add_message(self.character.id, self.user_id, "user", user_text)
+            from kokoro_term.memory.manager import extract_preferred_name_from_text
+            cand_name = extract_preferred_name_from_text(user_text)
+            if cand_name:
+                self.memory.set_preferred_name(self.character.id, self.user_id, cand_name)
+                if self.heartbeat:
+                    self.heartbeat.user_name = cand_name
 
         # Check if user is confirming a pending dangerous/moderate tool
         if self.agent_loop and self.agent_loop.resistance.has_pending():
             if self.agent_loop.resistance.is_user_confirming(user_text):
                 self._execute_confirmed_pending_tool()
                 return
+
+        # 🧠 Run Roxy's subconscious emotional introspection (Option B - Local Qwen)
+        if hasattr(self, "emotional_cognition") and self.memory:
+            try:
+                rel_state = self.memory.relationship.get_state(self.character.id, self.user_id)
+                recent_history = [m.content for m in self.memory.get_recent_messages(self.character.id, self.user_id, limit=4)]
+                effective_name = self.memory.get_preferred_name(self.character.id, self.user_id) or "Midhun-san"
+                
+                emo_state = await self.emotional_cognition.process_turn(
+                    user_message=user_text,
+                    relationship=rel_state,
+                    recent_context=recent_history,
+                    user_name=effective_name,
+                )
+                # Instantly reflect Roxy's bodily posture and emotional expression
+                avatar_panel = self.query_one("#avatar-panel", AvatarPanel)
+                avatar_panel.set_emotion(emo_state.recommended_expression)
+                if self.avatar_backend:
+                    self.avatar_backend.update_emotion(emo_state.recommended_expression)
+                    self.avatar_backend.update_pose(emo_state.recommended_pose)
+            except Exception:
+                pass
 
         # Prepare context window for LLM
         prompt_with_memory = self._prepare_system_prompt(current_user_query=user_text)
@@ -841,11 +927,15 @@ class KokoroApp(App):
                 "- /avatar preview: Cycle through animated expressions and mouth shapes\n"
                 "- /avatar backend [mode]: View or switch avatar backend (auto, window, terminal)\n"
                 "- /status: View character & relationship meters\n"
+                "- /mind: Peek directly into Roxy's private subconscious thoughts\n"
                 "- /status set <metric> <val>: Manually adjust a trait slider\n"
                 "- /status reset: Reset relationship to baseline\n"
+                "- /settings [voice|name|speed]: View or change voice, preferred name, and companion settings\n"
                 "- /character list: List installed characters\n"
                 "- /character use <name>: Hot-swap active companion on the fly\n"
                 "- /character new <id> <name>: Interactive character generator\n"
+                "- /voice list: List all available local and neural voices\n"
+                "- /voice set <voice_id>: Change character voice instantly\n"
                 "- /voice speed <x>: Instantly adjust Roxy's voice speed (0.9 to 1.5)\n"
                 "- /voice save <preset>: Save voice tuning to character preset\n"
                 "- /voice audition: Render audition benchmarks at speeds 1.0, 1.15, 1.25, 1.35\n"
@@ -1015,20 +1105,151 @@ class KokoroApp(App):
                         is_user=False
                     ))
 
+            elif sub_cmd in ("list", "voices"):
+                voices_info = (
+                    "[bold]🎙️ Available Voices (Consented Open-Source & Neural):[/bold]\n\n"
+                    "  [bold cyan]Kokoro Local Neural (100% Offline):[/bold cyan]\n"
+                    "  • [bold green]jf_alpha[/bold green]   - Soft, polite Japanese anime female (Shinobu / Roxy cadence)\n"
+                    "  • [bold green]af_heart[/bold green]   - Highly expressive, warm English dub anime female\n"
+                    "  • [bold green]af_bella[/bold green]   - Calm, gentle English female\n"
+                    "  • [bold green]af_sky[/bold green]     - Bright, energetic English female\n"
+                    "  • [bold green]af_sarah[/bold green]   - Natural, conversational English female\n"
+                    "  • [bold green]bf_emma[/bold green]    - Elegant British English female\n"
+                    "  • [bold green]jf_nezumi[/bold green]  - Quiet, gentle Japanese anime female\n\n"
+                    "  [bold cyan]Edge-TTS Cloud Neural:[/bold cyan]\n"
+                    "  • [yellow]en-US-AriaNeural[/yellow]  - Expressive anime dub\n"
+                    "  • [yellow]en-US-JennyNeural[/yellow] - Cheerful & energetic\n\n"
+                    "To switch: [bold green]/voice set <voice_id>[/bold green] (or [bold green]/settings voice <voice_id>[/bold green])"
+                )
+                await chat_scroll.mount(ChatMessageWidget(sender="System", text=voices_info, is_user=False))
+
+            elif sub_cmd in ("set", "use", "change"):
+                if len(parts) < 3:
+                    cur_v = getattr(self.character.voice, "voice_id", "jf_alpha") if self.character.voice else "jf_alpha"
+                    await chat_scroll.mount(ChatMessageWidget(
+                        sender="System",
+                        text=f"Current Voice: [bold cyan]{cur_v}[/bold cyan]\nUsage: /voice set <voice_id> (e.g. /voice set jf_alpha, /voice set af_heart)\nType /voice list to see options.",
+                        is_user=False
+                    ))
+                else:
+                    new_voice = parts[2].strip()
+                    if self.character.voice:
+                        self.character.voice.voice_id = new_voice
+                    if hasattr(self, "tts"):
+                        self.tts.set_voice(new_voice)
+
+                    # Persist to character voice.yaml
+                    v_path = Path("characters") / self.character.id / "voice.yaml"
+                    if v_path.exists():
+                        import yaml
+                        try:
+                            with open(v_path, "r", encoding="utf-8") as vf:
+                                ydata = yaml.safe_load(vf) or {}
+                            ydata["voice_id"] = new_voice
+                            with open(v_path, "w", encoding="utf-8") as vf:
+                                yaml.safe_dump(ydata, vf, sort_keys=False)
+                        except Exception:
+                            pass
+
+                    # Persist to default_config.yaml
+                    c_path = Path("config/default_config.yaml")
+                    if c_path.exists():
+                        import yaml
+                        try:
+                            with open(c_path, "r", encoding="utf-8") as cf:
+                                cdata = yaml.safe_load(cf) or {}
+                            if "voice" not in cdata or not isinstance(cdata["voice"], dict):
+                                cdata["voice"] = {}
+                            cdata["voice"]["voice"] = new_voice
+                            with open(c_path, "w", encoding="utf-8") as cf:
+                                yaml.safe_dump(cdata, cf, sort_keys=False)
+                        except Exception:
+                            pass
+
+                    await chat_scroll.mount(ChatMessageWidget(
+                        sender="System",
+                        text=f"[bold green]✓ Voice set to '{new_voice}'! Applied immediately and saved to configuration.[/bold green]",
+                        is_user=False
+                    ))
+
             else:
+                cur_v = getattr(self.character.voice, "voice_id", "jf_alpha") if self.character.voice else "jf_alpha"
                 cur_speed = self.character.voice.speed if self.character.voice else 1.15
-                cur_preset = self.character.voice.preset if self.character.voice else "mature_mommy_fast"
+                cur_preset = self.character.voice.preset if self.character.voice else "japanese_anime_girl"
                 await chat_scroll.mount(ChatMessageWidget(
                     sender="System",
                     text=(
-                        f"[bold]🎙️ Voice Controls:[/bold]\n"
+                        f"[bold]🎙️ Voice Controls & Settings:[/bold]\n"
+                        f"  • Active Voice: [bold cyan]{cur_v}[/bold cyan]\n"
                         f"  • Provider: [bold cyan]{self.tts.status_label}[/bold cyan]\n"
-                        f"  • Active Preset: [bold cyan]{cur_preset}[/bold cyan]\n"
-                        f"  • Current Speed: [bold cyan]{cur_speed:.2f}x[/bold cyan] ({round((cur_speed-1.0)*100):+d}% native rate)\n"
-                        f"  • Commands: /voice speed <0.9-1.5> | /voice provider <edge|local> [--pin] | /voice debug last | /voice audition"
+                        f"  • Preset: [bold cyan]{cur_preset}[/bold cyan]\n"
+                        f"  • Current Speed: [bold cyan]{cur_speed:.2f}x[/bold cyan] ({round((cur_speed-1.0)*100):+d}% native rate)\n\n"
+                        f"  • [green]/voice list[/green] - List all available voices\n"
+                        f"  • [green]/voice set <voice_id>[/green] - Change voice (e.g. jf_alpha, af_heart)\n"
+                        f"  • [green]/voice speed <0.9-1.5>[/green] - Adjust speech speed\n"
+                        f"  • [green]/voice provider <edge|local>[/green] - Toggle cloud / local engine"
                     ),
                     is_user=False
                 ))
+
+        elif root_cmd in ("/settings", "/setting", "/config"):
+            sub_cmd = parts[1].lower() if len(parts) > 1 else ""
+            if sub_cmd in ("voice", "voice_id"):
+                if len(parts) < 3:
+                    cur_v = getattr(self.character.voice, "voice_id", "jf_alpha") if self.character.voice else "jf_alpha"
+                    await chat_scroll.mount(ChatMessageWidget(
+                        sender="System",
+                        text=f"Current Voice: [bold cyan]{cur_v}[/bold cyan]\nUsage: /settings voice <voice_id> (e.g. jf_alpha, af_heart)\nType /voice list to see all voices.",
+                        is_user=False
+                    ))
+                else:
+                    await self._handle_command(f"/voice set {parts[2]}")
+            elif sub_cmd in ("name", "user_name", "preferred_name"):
+                if len(parts) < 3:
+                    cur_name = self.memory.get_preferred_name(self.character.id, self.user_id) if self.memory else self.user_id
+                    await chat_scroll.mount(ChatMessageWidget(
+                        sender="System",
+                        text=f"Current Preferred Name: [bold cyan]{cur_name}[/bold cyan]\nUsage: /settings name <preferred_name> (e.g. /settings name sir)",
+                        is_user=False
+                    ))
+                else:
+                    new_name = " ".join(parts[2:]).strip()
+                    if self.memory:
+                        self.memory.set_preferred_name(self.character.id, self.user_id, new_name)
+                    if self.heartbeat:
+                        self.heartbeat.user_name = new_name
+                    await chat_scroll.mount(ChatMessageWidget(
+                        sender="System",
+                        text=f"[bold green]✓ Preferred name updated to '{new_name}'! Roxy will remember and address you as '{new_name}' permanently.[/bold green]",
+                        is_user=False
+                    ))
+            elif sub_cmd in ("speed", "rate"):
+                if len(parts) < 3:
+                    cur_speed = self.character.voice.speed if self.character.voice else 1.15
+                    await chat_scroll.mount(ChatMessageWidget(
+                        sender="System",
+                        text=f"Current Voice Speed: [bold cyan]{cur_speed:.2f}x[/bold cyan]\nUsage: /settings speed <0.9 - 1.5>",
+                        is_user=False
+                    ))
+                else:
+                    await self._handle_command(f"/voice speed {parts[2]}")
+            else:
+                cur_v = getattr(self.character.voice, "voice_id", "jf_alpha") if self.character.voice else "jf_alpha"
+                cur_name = self.memory.get_preferred_name(self.character.id, self.user_id) if self.memory else self.user_id
+                cur_speed = self.character.voice.speed if self.character.voice else 1.15
+                prov = self.tts.active_mode if hasattr(self, "tts") else "local"
+                llm_prov = self.config.llm.provider
+                llm_model = self.config.llm.model
+                settings_text = (
+                    "[bold]⚙️ Roxy Settings & Configuration:[/bold]\n"
+                    f"  • [bold]Preferred Name:[/bold] [bold cyan]{cur_name}[/bold cyan]  (Change with [green]/settings name <name>[/green])\n"
+                    f"  • [bold]Voice:[/bold] [bold cyan]{cur_v}[/bold cyan] ({prov})  (Change with [green]/settings voice <voice_id>[/green] or [green]/voice list[/green])\n"
+                    f"  • [bold]Voice Speed:[/bold] [bold cyan]{cur_speed:.2f}x[/bold cyan]  (Change with [green]/settings speed <speed>[/green])\n"
+                    f"  • [bold]LLM Brain:[/bold] [bold cyan]{llm_prov} ({llm_model})[/bold cyan]\n"
+                    f"  • [bold]Memory DB:[/bold] [dim]{self.config.memory.db_path}[/dim]\n\n"
+                    "[dim]All settings are saved permanently across terminal restarts.[/dim]"
+                )
+                await chat_scroll.mount(ChatMessageWidget(sender="System", text=settings_text, is_user=False))
 
         elif root_cmd == "/avatar":
             sub_cmd = parts[1].lower() if len(parts) > 1 else "validate"
@@ -1204,7 +1425,35 @@ class KokoroApp(App):
                     f"[dim]Total Interactions: {state.total_interactions} | Known Facts: {fact_count}[/dim]",
                     "[dim]Edit with: /status set <metric> <val>  |  Reset: /status reset[/dim]",
                 ]
+
+                if hasattr(self, "emotional_cognition"):
+                    st = self.emotional_cognition.state
+                    status_lines.extend([
+                        "",
+                        "[bold magenta]Roxy's Subconscious Mind & Inner Feelings (Option B):[/bold magenta]",
+                        f"  • Inner State: [italic]{st.blend_description()}[/italic]",
+                        f"  • Private Monologue: [dim]\"{st.inner_monologue}\"[/dim]",
+                        f"  • Body Language: Pose=[yellow]{st.recommended_pose}[/yellow] | Expression=[yellow]{st.recommended_expression}[/yellow]",
+                        f"  • Heartbeat: [green]Active[/green] (running locally on Qwen 2.5 1.5B)",
+                    ])
+
                 await chat_scroll.mount(ChatMessageWidget(sender="System", text="\n".join(status_lines), is_user=False))
+
+        elif root_cmd in ("/mind", "/thoughts"):
+            if hasattr(self, "emotional_cognition"):
+                st = self.emotional_cognition.state
+                thoughts = (
+                    f"[bold magenta]💭 Roxy's Private Subconscious Mind:[/bold magenta]\n"
+                    f"• [bold]Inner State:[/bold] {st.blend_description()}\n"
+                    f"• [bold]Private Monologue:[/bold] \"{st.inner_monologue}\"\n"
+                    f"• [bold]Unresolved Tension:[/bold] {st.unresolved_tension or 'None (she feels secure and calm)'}\n"
+                    f"• [bold]Body Demeanor:[/bold] Pose=[yellow]{st.recommended_pose}[/yellow] | Expression=[yellow]{st.recommended_expression}[/yellow]\n"
+                    f"• [bold]Emotional Vector:[/bold] Joy={st.joy:.2f} | Trust={st.trust:.2f} | Valence={st.valence:+.2f} | Arousal={st.arousal:.2f}\n"
+                    f"[dim]Powered 100% locally by Qwen 2.5 1.5B on your RTX 3050[/dim]"
+                )
+                await chat_scroll.mount(ChatMessageWidget(sender="System", text=thoughts, is_user=False))
+            else:
+                await chat_scroll.mount(ChatMessageWidget(sender="System", text="Emotional cognition layer is not active.", is_user=False))
 
         elif root_cmd == "/memory":
             sub_cmd = parts[1].lower() if len(parts) > 1 else "show"
@@ -1530,7 +1779,16 @@ class KokoroApp(App):
                     rel_state=rel_state,
                 ):
                     etype = event.get("type")
-                    if etype == "token":
+                    if etype == "step":
+                        if event.get("step", 1) > 1 and full_raw_text.strip():
+                            # Post-tool follow-up turn: mount a fresh bot widget so step 2 text doesn't merge into step 1
+                            bot_widget = ChatMessageWidget(sender=self.character.display_name, text="...", is_user=False)
+                            await chat_scroll.mount(bot_widget)
+                            chat_scroll.scroll_end(animate=False)
+                            full_raw_text = ""
+                            emotion_detected = False
+
+                    elif etype == "token":
                         full_raw_text += event["token"]
                         clean_text, emo = parse_and_strip_emotion_tag(full_raw_text)
                         if emo != "neutral" and not emotion_detected:
@@ -1540,9 +1798,10 @@ class KokoroApp(App):
                                 self.avatar_backend.update_emotion(detected_emotion)
                             emotion_detected = True
 
-                        # Strip incomplete trailing tag while streaming
-                        clean_display = re.sub(r"\[emotion:[^\]]*$", "", clean_text, flags=re.IGNORECASE)
-                        clean_display = re.sub(r"<tool_call>.*?</tool_call>", "", clean_display, flags=re.DOTALL).strip()
+                        # Strip incomplete trailing tag and tool blocks while streaming
+                        clean_display = re.sub(r"\[(?:emotion|motion|action|tool):[^\]]*$", "", clean_text, flags=re.IGNORECASE)
+                        clean_display = re.sub(r"\[(?:action|tool):[^\]]*\]", "", clean_display, flags=re.IGNORECASE)
+                        clean_display = re.sub(r"<tool_call(?:\s+[^>]*)?>[\s\S]*?(?:<\/tool_call>|$)", "", clean_display, flags=re.DOTALL | re.IGNORECASE).strip()
                         bot_widget.update_text(clean_display or "...")
                         avatar_panel.subtitle_text = clean_display or "..."
                         chat_scroll.scroll_end(animate=False)
@@ -1618,6 +1877,7 @@ class KokoroApp(App):
                     self.avatar_backend.update_emotion(detected_emotion)
 
             if cleaned_final:
+                self._last_assistant_message = cleaned_final
                 # Store assistant response in SQLite memory without leaking raw emotion tags
                 if self.memory:
                     self.memory.add_message(

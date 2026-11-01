@@ -21,6 +21,43 @@ from kokoro_term.tools.injection_defense import wrap_untrusted_data
 from kokoro_term.tools.tasks import TASK_REGISTRY
 
 
+def sanitize_music_query(query: str) -> str:
+    """Normalize conversational, companion address, and platform mentions from a music query."""
+    if not query:
+        return "trending hits"
+    raw = str(query).strip()
+
+    # 1. Strip leading wake words or companion address (e.g. 'roxy', 'hey roxy')
+    raw = re.sub(r"^(?:hey\s+|hi\s+|hello\s+)?(?:roxy|migurdia|assistant)[,\s:]*", "", raw, flags=re.IGNORECASE).strip()
+    # 2. Strip trailing companion address (e.g. 'for me roxy', ', roxy!')
+    raw = re.sub(r"[,.\s]+(?:roxy|migurdia|assistant)[.!?]*$", "", raw, flags=re.IGNORECASE).strip()
+    # 3. Strip politeness / modal verbs (e.g. 'can you play', 'please play')
+    raw = re.sub(r"^(?:can\s+you\s+|could\s+you\s+|would\s+you\s+|please\s+)+", "", raw, flags=re.IGNORECASE).strip()
+    # 4. Strip play / stream verbs
+    raw = re.sub(r"^(?:play|listen\s+to|stream|put\s+on|hear|find\s+and\s+play|find|start\s+playing|start)\s+", "", raw, flags=re.IGNORECASE).strip()
+    # 5. Strip YouTube mentions
+    raw = re.sub(r"\b(?:on|from|in)\s+(?:yt|youtube|youtube\s+music)\b", "", raw, flags=re.IGNORECASE).strip()
+    raw = re.sub(r"\s+(?:on\s+yt|on\s+youtube|yt|youtube)$", "", raw, flags=re.IGNORECASE).strip()
+    # 6. Strip 'for me / for us / to me'
+    raw = re.sub(r"\b(?:for\s+me|for\s+us|to\s+me)\b", "", raw, flags=re.IGNORECASE).strip()
+    # 7. Strip isolated bot name unless user explicitly asked for 'roxy music' (the band)
+    if not re.search(r"\broxy\s+music\b", raw, flags=re.IGNORECASE):
+        raw = re.sub(r"\b(?:roxy|migurdia)\b", "", raw, flags=re.IGNORECASE).strip()
+
+    # Clean leftover whitespace/punctuation
+    raw = re.sub(r"^[,\s.-]+|[,\s.-]+$", "", raw).strip()
+
+    generic_phrases = {
+        "", "a song", "some songs", "music", "songs", "song", "some music",
+        "tunes", "anything", "something", "a track", "tracks", "good music",
+        "random song", "a random song", "nice song", "popular song", "any music",
+        "a good song", "any song", "favorite song", "a playlist", "playlist"
+    }
+    if raw.lower() in generic_phrases:
+        return "trending hits"
+    return raw
+
+
 class MusicManager:
     """Manages audio streaming via headless mpv with IPC control and ducking."""
 
@@ -238,7 +275,8 @@ class MusicManager:
             actual_tracks = tracks or []
         query = actual_query
         tracks = actual_tracks
-        clean_q = re.sub(r"\b(play|song|music|track|put on|by|the)\b", "", query, flags=re.IGNORECASE).strip().lower()
+        clean_q = sanitize_music_query(query).lower()
+        clean_q = re.sub(r"\b(play|song|music|track|put on|by|the)\b", "", clean_q, flags=re.IGNORECASE).strip()
         q_tokens = [t for t in re.split(r"\W+", clean_q) if len(t) > 1]
 
         low_q = query.lower()
@@ -293,7 +331,7 @@ class MusicManager:
 
     def search_tracks(self, query: str, limit: int = 5) -> list[dict[str, Any]]:
         """Search YouTube for tracks using yt-dlp."""
-        clean_q = query.strip()
+        clean_q = sanitize_music_query(query)
         low = clean_q.lower()
         allow_live = any(k in low for k in ("live", "radio", "stream"))
         allow_long = any(k in low for k in ("mix", "radio", "live", "compilation", "stream", "hour", "playlist", "album"))
@@ -339,19 +377,36 @@ class MusicManager:
                 raise RuntimeError(f"YouTube extraction error: {err_str}. Suggest running: pip install -U yt-dlp")
             raise RuntimeError(f"yt-dlp search failed: {err_str}")
 
-    def verify_playback(self, expected_track: dict[str, Any], timeout_sec: float = 3.5) -> tuple[bool, str]:
-        """Verify real playback: media-title loaded, time-pos advancing over ~2s, volume > 0, unpaused, audio stream active on sink."""
+    def verify_playback(self, expected_track: dict[str, Any], timeout_sec: float = 10.0) -> tuple[bool, str]:
+        """Verify real playback: wait for mpv stream decoding, time-pos advancing, unpaused, and volume > 0."""
         start_t = time.monotonic()
         loaded = False
+        t0 = 0.0
 
+        # Wait up to timeout_sec for yt-dlp to resolve the stream and mpv to begin decoding
         while time.monotonic() - start_t < timeout_sec:
             if self.proc and self.proc.poll() is not None:
                 return False, f"mpv exited unexpectedly with code {self.proc.returncode}"
-            res_title = self.send_ipc(["get_property", "media-title"])
-            if res_title and res_title.get("data"):
+
+            res_tpos = self.send_ipc(["get_property", "time-pos"])
+            if res_tpos and res_tpos.get("error") == "success" and res_tpos.get("data") is not None:
+                t0 = float(res_tpos.get("data") or 0.0)
                 loaded = True
                 break
-            time.sleep(0.2)
+
+            # Fallback: check if media-title resolved from URL to real track name
+            res_title = self.send_ipc(["get_property", "media-title"])
+            if res_title and res_title.get("data"):
+                t_val = str(res_title.get("data"))
+                if not t_val.startswith("watch?v=") and not t_val.startswith("http"):
+                    time.sleep(0.4)
+                    res_tpos = self.send_ipc(["get_property", "time-pos"])
+                    if res_tpos and res_tpos.get("data") is not None:
+                        t0 = float(res_tpos.get("data") or 0.0)
+                        loaded = True
+                        break
+
+            time.sleep(0.3)
 
         if not loaded:
             return False, "Timed out waiting for mpv media stream resolution"
@@ -367,37 +422,25 @@ class MusicManager:
         if vol < 10 and self.is_ducked:
             return False, f"Playback volume is near zero ({vol}%) due to ducking"
 
-        # Check time-pos advancing over ~1.5s
-        t0_res = self.send_ipc(["get_property", "time-pos"])
-        t0 = float(t0_res.get("data") or 0.0) if t0_res else 0.0
-
-        time.sleep(1.5)
-
+        # Check time-pos advancing over ~1.2s
+        time.sleep(1.2)
         t1_res = self.send_ipc(["get_property", "time-pos"])
-        t1 = float(t1_res.get("data") or 0.0) if t1_res else 0.0
+        t1 = float(t1_res.get("data") or 0.0) if t1_res and t1_res.get("data") is not None else 0.0
 
-        if t1 <= t0 and t0 == 0.0:
-            idle_res = self.send_ipc(["get_property", "idle-active"])
-            if idle_res and idle_res.get("data") is True:
-                return False, "mpv idle-active is true; media failed to decode"
+        if t1 > t0 or t1 > 0.0:
+            return True, "Playback verified successfully"
 
-        # Check sink stream via pactl / wpctl on Linux
+        # If time-pos did not advance, check if idle or failed to decode
+        idle_res = self.send_ipc(["get_property", "idle-active"])
+        if idle_res and idle_res.get("data") is True:
+            return False, "mpv idle-active is true; media failed to decode"
+
+        # Check sink stream via pactl / wpctl on Linux as a fallback
         if self.system == "linux":
             try:
-                sin = subprocess.run(["pactl", "list", "sink-inputs"], capture_output=True, text=True, timeout=1.0)
-                if "application.name = \"mpv\"" not in sin.stdout and "media.name" not in sin.stdout:
-                    wres = subprocess.run(["wpctl", "status"], capture_output=True, text=True, timeout=1.0)
-                    if "mpv" not in wres.stdout:
-                        return False, "No active audio stream found on PipeWire/PulseAudio sink"
-
                 sinks_res = subprocess.run(["pactl", "list", "sinks"], capture_output=True, text=True, timeout=1.0)
                 if "Mute: yes" in sinks_res.stdout and "Mute: no" not in sinks_res.stdout:
                     return False, "Audio sink is muted on system"
-
-                # Check Bluetooth sink if used
-                bt_sinks = subprocess.run(["pactl", "list", "sinks", "short"], capture_output=True, text=True, timeout=1.0)
-                if "bluez" in bt_sinks.stdout.lower() and "bluez" not in sinks_res.stdout.lower():
-                    pass
             except Exception:
                 pass
 
@@ -411,7 +454,7 @@ class MusicManager:
 
         try:
             gui_env = capture_gui_environment()
-            cmd = ["mpv", "--no-video", "--ao=pipewire,pulse", "av://lavfi:sine=frequency=440:duration=1"]
+            cmd = ["mpv", "--no-video", "--volume=0", "--ao=pipewire,pulse", "av://lavfi:sine=frequency=440:duration=1"]
             proc = subprocess.Popen(cmd, env=gui_env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             time.sleep(0.3)
 
@@ -646,8 +689,8 @@ class MusicPlayTool(BaseTool):
     tier = "safe"
 
     async def execute(self, query: Optional[str] = None, queue: bool = False, **kwargs) -> ToolResult:
-        raw_q = query or kwargs.get("song") or kwargs.get("track") or kwargs.get("name") or kwargs.get("search") or kwargs.get("q") or "lofi hip hop"
-        clean_q = re.sub(r"^(?:play|listen to|hear|stream)\s+", "", str(raw_q), flags=re.IGNORECASE).strip() or str(raw_q).strip()
+        raw_q = query or kwargs.get("song") or kwargs.get("track") or kwargs.get("name") or kwargs.get("search") or kwargs.get("q") or "trending hits"
+        clean_q = sanitize_music_query(str(raw_q))
         res = MUSIC_MANAGER.play(clean_q, queue_mode=queue)
         track = res.get("track")
         if res.get("ok") and track:
@@ -658,6 +701,7 @@ class MusicPlayTool(BaseTool):
                 success=True,
                 output=detail,
                 detail=detail,
+                data={"track": track},
             )
         err = res.get("detail", "Playback failed.")
         return ToolResult(success=False, output="", error=err, detail=err)

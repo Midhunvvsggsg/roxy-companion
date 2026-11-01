@@ -25,7 +25,26 @@ First character: **Roxy Migurdia** from *Mushoku Tensei* (serious, proud water s
 
 ---
 
-## ⚡ Key Highlights
+## 🚀 Running Roxy Companion
+
+Roxy Companion supports two versatile modes:
+
+### 1. 🌟 2.5D Animated Studio & Companion Window (Default)
+A dedicated, transparent desktop companion window featuring 2.5D mesh animations, real-time voice, microphone VAD, screen vision analysis, and relationship state:
+```bash
+./bin/roxy
+```
+*(Or install `bin/roxy` into your `$PATH` as `roxy`)*
+
+### 2. 🌸 Terminal Waifu TUI
+Ultra-lightweight Textual terminal companion with half-block / Sixel animation:
+```bash
+./bin/roxy --term
+# Or directly via package:
+uv run kokoro-term
+```
+
+---
 
 - **Ultra Resource-Friendly**: < 30 MB disk in text-only mode, ~50 MB RAM active, near 0.0% idle CPU.
 - **Pluggable LLMs**: Default **Google Gemini API**, plus native support for **OpenAI, Ollama, LM Studio, and Mock** offline testing.

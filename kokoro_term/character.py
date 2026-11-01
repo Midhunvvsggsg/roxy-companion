@@ -23,6 +23,7 @@ class VoiceConfig(BaseModel):
     pause_comma_ms: int = 120
     pause_sentence_ms: int = 250
     trim_silence: bool = True
+    lipsync_offset_ms: float = 0.0
     emotion_pace: dict[str, float] = Field(default_factory=dict)
     emotion_pitch: dict[str, int] = Field(default_factory=dict)
     speech_style: dict[str, Any] = Field(default_factory=dict)

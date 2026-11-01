@@ -214,37 +214,41 @@ class NowPlayingTool(BaseTool):
 class YouTubePlayTool(BaseTool):
     name = "youtube_play"
     description = (
-        "Search and open a video to watch on YouTube in the browser. "
-        "NOTE: For music, songs, lofi, or background audio, DO NOT use this tool; "
-        "use 'music_play' instead so no browser tab or window is shown."
+        "Play or watch videos, songs, or music on YouTube. "
+        "For music, songs, or background audio, streams headlessly via mpv without opening browser tabs. "
+        "For video viewing, opens the direct video in the browser."
     )
     parameters = {
         "query": {
             "type": "string",
-            "description": "Search query or video URL to watch on YouTube",
+            "description": "Search query or video URL to play on YouTube",
         },
         "player": {
             "type": "string",
-            "description": "Playback target: 'browser' (default) or 'mpv'",
+            "description": "Playback target: 'mpv' (headless background audio, default) or 'browser' (watch video)",
         },
     }
     tier = "safe"
 
-    async def execute(self, query: Optional[str] = None, player: str = "browser", **kwargs) -> ToolResult:
+    async def execute(self, query: Optional[str] = None, player: str = "mpv", **kwargs) -> ToolResult:
         raw_q = query or kwargs.get("search") or kwargs.get("q") or kwargs.get("song") or kwargs.get("video") or ""
         q = str(raw_q).strip()
         if not q:
             return ToolResult(success=False, output="", error="Missing YouTube search query")
 
         low_q = q.lower()
+        clean_music_q = re.sub(r"\b(?:on|from|in)\s+(?:yt|youtube|youtube\s+music)\b", "", q, flags=re.IGNORECASE).strip()
+        clean_music_q = re.sub(r"^(?:play|listen\s+to|stream|put\s+on|hear|watch)\s+", "", clean_music_q, flags=re.IGNORECASE).strip()
+        clean_music_q = re.sub(r"\s+(?:on\s+yt|on\s+youtube|yt|youtube)$", "", clean_music_q, flags=re.IGNORECASE).strip()
 
         # Intercept music / song requests to play headlessly in background without opening browser tabs
-        if (
-            re.search(r"\b(music|song|songs|track|tracks|lofi|audio|soundtrack|album|tune|tunes)\b", low_q)
-            or player == "mpv"
-        ):
+        is_browser = player.lower() in ("browser", "brave", "chrome", "firefox", "chromium")
+        is_music = bool(
+            re.search(r"\b(music|song|songs|track|tracks|lofi|audio|soundtrack|album|tune|tunes|ost|opening|ending)\b", low_q)
+            or not is_browser
+        )
+        if not is_browser or is_music:
             from kokoro_term.tools.music import MUSIC_MANAGER
-            clean_music_q = re.sub(r"^(?:play|listen to|hear|stream)\s+", "", q, flags=re.IGNORECASE).strip()
             res = MUSIC_MANAGER.play(clean_music_q or q)
             track = res.get("track")
             if res.get("ok") and track:
@@ -259,12 +263,21 @@ class YouTubePlayTool(BaseTool):
                 detail=detail,
             )
 
-        # Determine target URL
+        # Determine target URL: resolve top direct video so YouTube actually starts playing
         if q.startswith("http://") or q.startswith("https://"):
             url = q
         else:
-            encoded = urllib.parse.quote_plus(q)
-            url = f"https://www.youtube.com/results?search_query={encoded}"
+            from kokoro_term.tools.music import MUSIC_MANAGER
+            try:
+                tracks = MUSIC_MANAGER.search_tracks(clean_music_q or q, limit=1)
+                if tracks and tracks[0].get("url"):
+                    url = tracks[0]["url"]
+                else:
+                    encoded = urllib.parse.quote_plus(clean_music_q or q)
+                    url = f"https://www.youtube.com/results?search_query={encoded}"
+            except Exception:
+                encoded = urllib.parse.quote_plus(clean_music_q or q)
+                url = f"https://www.youtube.com/results?search_query={encoded}"
 
         # Default: open in browser
         res = open_url_or_site(url, wait_sec=2.0)

@@ -13,6 +13,25 @@ from kokoro_term.memory.models import Episode, Fact, MessageRecord
 from kokoro_term.relationship.engine import RelationshipEngine
 
 
+def extract_preferred_name_from_text(text: str) -> Optional[str]:
+    """Extract requested preferred name from natural language user input."""
+    t = text.strip()
+    t = re.sub(r"[\"\x27]", "", t)
+    t = re.sub(r"[\.,!?;]+$", "", t)
+    t = re.sub(r"\s+from\s+now\s+on\b.*$", "", t, flags=re.IGNORECASE).strip()
+
+    parts = re.split(r"\b(?:call me|address me as|refer to me as|my name is)\s+", t, flags=re.IGNORECASE)
+    if len(parts) > 1:
+        candidate = parts[-1].strip()
+        candidate = re.split(r"[\.,!?;]|\b(?:please|now|ok|okay|instead|thanks|thank you)\b", candidate, flags=re.IGNORECASE)[0].strip()
+        words = candidate.split()
+        if words:
+            cand_name = " ".join(words[:2]) if len(words) > 1 and words[1].lower() in ("san", "sama", "kun", "chan", "senpai") else words[0]
+            if cand_name.lower() not in ("what", "who", "why", "how", "please", "something", "anything", "back", "again", "later"):
+                return cand_name
+    return None
+
+
 class MemoryManager:
     """Three-layer adaptive memory system: short-term window, episodic summaries, and semantic facts."""
 
@@ -116,7 +135,7 @@ class MemoryManager:
             SELECT value FROM facts
             WHERE character_id = ? AND user_id = ? AND active = 1
             AND (key IN ('preferred_name', 'user_name', 'name', 'nickname', 'call_me') OR (category = 'identity' AND key LIKE '%name%'))
-            ORDER BY id DESC LIMIT 1
+            ORDER BY CASE WHEN key = 'preferred_name' THEN 0 WHEN key = 'call_me' THEN 1 ELSE 2 END, id DESC LIMIT 1
             """,
             (character_id, user_id),
         )
@@ -126,8 +145,18 @@ class MemoryManager:
         return None
 
     def set_preferred_name(self, character_id: str, user_id: str, name: str) -> Fact:
-        """Store or update user's preferred name as a permanent identity fact."""
-        return self.upsert_fact(character_id, user_id, "identity", "preferred_name", name.strip(), confidence=1.0)
+        """Store or update user's preferred name as a permanent identity fact, retiring older contradictory names."""
+        clean_name = name.strip()
+        with self.conn:
+            self.conn.execute(
+                """
+                UPDATE facts SET active = 0
+                WHERE character_id = ? AND user_id = ?
+                AND (key IN ('preferred_name', 'user_name', 'name', 'nickname', 'call_me') OR (category = 'identity' AND key LIKE '%name%'))
+                """,
+                (character_id, user_id),
+            )
+        return self.upsert_fact(character_id, user_id, "identity", "preferred_name", clean_name, confidence=1.0)
 
     async def extract_facts_from_turn(
         self,
@@ -141,13 +170,10 @@ class MemoryManager:
         clean_msg = user_message.strip()
         saved: list[Fact] = []
 
-        # Fast direct capture for preferred names (e.g. 'call me Midhun-san', 'my name is Opah')
-        m_name = re.search(r"\b(?:call me|my name is|please call me|you can call me|address me as)\s+([A-Za-z0-9_\-]+(?:\s+[A-Za-z0-9_\-]+)?)\b", clean_msg, re.IGNORECASE)
-        if m_name:
-            cand_name = m_name.group(1).strip()
-            if cand_name and cand_name.lower() not in ("what", "who", "why", "how", "please"):
-                f = self.set_preferred_name(character_id, user_id, cand_name)
-                saved.append(f)
+        cand_name = extract_preferred_name_from_text(clean_msg)
+        if cand_name:
+            f = self.set_preferred_name(character_id, user_id, cand_name)
+            saved.append(f)
 
         if len(clean_msg) < 8 or clean_msg.lower() in ("hi", "hello", "hey", "goof", "yes", "no", "ok", "confirm"):
             return saved
@@ -178,6 +204,8 @@ class MemoryManager:
                     k = item.get("key", "").strip()
                     v = item.get("value", "").strip()
                     if k and v:
+                        if k in ("name", "preferred_name", "user_name", "nickname", "call_me") and self.get_preferred_name(character_id, user_id):
+                            continue
                         f = self.upsert_fact(character_id, user_id, cat, k, v)
                         saved.append(f)
             return saved
@@ -403,8 +431,13 @@ class MemoryManager:
         # 2. Facts
         facts = self.get_facts(character_id, user_id, active_only=True)
         if facts:
-            fact_lines = [f"- [{f.category}] {f.key}: {f.value}" for f in facts]
-            sections.append("Known Facts & Preferences about User:\n" + "\n".join(fact_lines))
+            fact_lines = [
+                f"- [{f.category}] {f.key}: {f.value}"
+                for f in facts
+                if f.key not in ("name", "preferred_name", "user_name", "nickname", "call_me")
+            ]
+            if fact_lines:
+                sections.append("Known Facts & Preferences about User:\n" + "\n".join(fact_lines))
 
         # 2. Recent episodes
         episodes = self.get_recent_episodes(character_id, user_id, limit=2)

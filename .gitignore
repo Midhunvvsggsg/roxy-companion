@@ -1,27 +1,44 @@
 # Python-generated files
 __pycache__/
 *.py[oc]
-build/
-dist/
+/build/
+/dist/
 wheels/
 *.egg-info
+*.egg
 
 # Virtual environments
-.venv
+.venv/
+env/
+venv/
 
 # Environment variables and secrets
 .env
 .env.*
 !.env.example
 
-# Local SQLite databases
+# Local SQLite databases, logs, and temp test dumps
 data/*.db
 data/*.db-shm
 data/*.db-wal
-data/audit.log
+data/*.log
 data/*.wav
+data/*.mp3
+data/*.png
+data/anime_dub_audition/
+data/voice_candidates/
+data/voice_debug_last/
+data/test_jenny/
 
-# Character-specific avatar art (do not bundle in public repository)
-characters/roxy/avatar/
-!characters/roxy/avatar/forehead_masks.json
-assets_in/roxy/
+# Heavy ONNX / TTS models (download on demand)
+models/
+
+# Studio review renders and caches
+studio/projects/roxy/review/
+studio/projects/roxy/assets_backup/
+studio/dist/miko-qipao/
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store

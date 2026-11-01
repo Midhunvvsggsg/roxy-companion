@@ -20,6 +20,8 @@ class AvatarState:
         overlays: Optional[list[str]] = None,
         offset_y: float = 0.0,
         offset_x: float = 0.0,
+        hair_offset_x: float = 0.0,
+        pose: str = "normal",
     ):
         self.emotion = emotion
         self.eye_state = eye_state
@@ -29,6 +31,8 @@ class AvatarState:
         self.overlays = tuple(sorted(overlays or []))
         self.offset_y = round(offset_y, 1)
         self.offset_x = round(offset_x, 1)
+        self.hair_offset_x = round(hair_offset_x, 1)
+        self.pose = pose
 
     def key(self) -> tuple:
         return (
@@ -40,6 +44,8 @@ class AvatarState:
             self.overlays,
             self.offset_y,
             self.offset_x,
+            self.hair_offset_x,
+            self.pose,
         )
 
 
@@ -182,6 +188,7 @@ class AvatarCompositor:
 
         scaled_offset_x = int(round(state.offset_x * self.scale_x))
         scaled_offset_y = int(round(state.offset_y * self.scale_y))
+        scaled_hair_x = int(round((state.offset_x + state.hair_offset_x) * self.scale_x))
 
         # Paste each layer onto master canvas
         for _, layer_def, is_facial in layers_to_draw:
@@ -190,8 +197,12 @@ class AvatarCompositor:
                 continue
             layer_img, ox, oy = scaled
 
-            # Apply breathing / sway offset
-            pos_x = ox + (scaled_offset_x if is_facial else 0)
+            # Apply breathing / sway offset (hair has dynamic inertia lag)
+            is_hair = "hair" in layer_def.file.lower() or layer_def.group == "overlay"
+            if is_hair and "hair" in layer_def.file.lower():
+                pos_x = ox + scaled_hair_x
+            else:
+                pos_x = ox + (scaled_offset_x if is_facial else 0)
             pos_y = oy + scaled_offset_y
 
             canvas.paste(layer_img, (pos_x, pos_y), layer_img)

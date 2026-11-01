@@ -67,6 +67,16 @@ class TTSManager:
             self._active_mode = "local"
         self.pinned = pin
 
+    def set_voice(self, voice_id: str) -> None:
+        """Update active voice_id across config and providers."""
+        self.voice_config.voice_id = voice_id
+        if hasattr(self.local_provider, "voice_config"):
+            self.local_provider.voice_config.voice_id = voice_id
+        if hasattr(self.local_provider, "_kokoro") and self.local_provider._kokoro:
+            self.local_provider._kokoro.voice_config.voice_id = voice_id
+        if hasattr(self.edge_provider, "voice_config"):
+            self.edge_provider.voice_config.voice_id = voice_id
+
     def consume_fallback_notice(self) -> Optional[str]:
         """Return and clear any pending visible fallback notice for the UI."""
         notice = self.last_fallback_notice

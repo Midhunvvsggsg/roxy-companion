@@ -93,6 +93,7 @@ def load_config(config_path: Optional[str | Path] = None) -> AppConfig:
         candidate_paths.append(Path(config_path))
     
     # Project default
+    candidate_paths.append(Path(__file__).resolve().parent.parent / "config" / "default_config.yaml")
     candidate_paths.append(Path("config/default_config.yaml"))
     
     # User config directory fallback

@@ -1,0 +1,75 @@
+:root { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #22344d; background: #f3f5f8; font-size: 14px; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+button, select, input { font: inherit; }
+button, select, .obs-url { border: 1px solid #c8d3e2; border-radius: 7px; background: white; color: inherit; padding: 8px 10px; }
+button { cursor: pointer; }
+button:disabled { opacity: .5; cursor: default; }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid #3977d8; outline-offset: 2px; }
+button[aria-pressed="true"] { color: #175db8; background: #e6efff; }
+a { color: #235fae; }
+h1 { margin: 6px 0 0; font-size: 20px; } h1 span { color: #61799a; margin-left: 8px; font-weight: 500; }
+h2 { font-size: 15px; margin: 0 0 12px; }
+p { line-height: 1.5; } small { display: block; color: #546a87; line-height: 1.5; }
+.live-app { padding: 18px 24px; max-width: 1800px; margin: auto; }
+.live-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; gap: 12px; }
+.live-languages { display: flex; gap: 4px; }
+.live-layout { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 22px; align-items: start; }
+.live-view { position: sticky; top: 18px; min-width: 0; }
+.live-preview { height: calc(100dvh - 150px); min-height: 320px; border: 1px solid #d5dfeb; border-radius: 12px; overflow: hidden; }
+.checkerboard { background-image: conic-gradient(#e1e5eb 25%, #f8f9fb 0 50%, #e1e5eb 0 75%, #f8f9fb 0); background-size: 24px 24px; }
+.live-preview canvas { display: block; width: 100%; height: 100%; }
+.live-controls { display: flex; flex-direction: column; gap: 14px; }
+.live-controls section { padding: 16px; border: 1px solid #d5dfeb; border-radius: 12px; background: white; }
+.live-controls label { display: flex; flex-direction: column; gap: 7px; margin: 12px 0; }
+.live-controls select, .obs-url { width: 100%; min-width: 0; }
+.live-controls .live-check { flex-direction: row; align-items: center; }
+input[type="range"] { width: 100%; accent-color: #3977d8; }
+input[type="color"] { width: 100%; height: 32px; border: 0; padding: 0; }
+.live-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.live-primary { background: #2d67b2; color: white; border-color: #2d67b2; }
+.live-open { display: inline-block; border: 1px solid #2d67b2; border-radius: 7px; padding: 8px 10px; color: #2d67b2; text-decoration: none; }
+.camera-preview { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 7px; background: #162132; }
+.camera-hidden { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.obs-url { font-size: 11px; margin: 10px 0; }
+.live-privacy { color: #546a87; font-size: 12px; margin: 0 4px; }
+.live-error { color: #aa2020; }
+@media (max-width: 800px) { .live-app { padding: 12px; } .live-layout { grid-template-columns: 1fr; } .live-view { position: static; } .live-preview { height: 55dvh; } .live-header { flex-wrap: wrap; } }
+.live-controls .live-lighting .lighting-controls { padding: 0 16px 16px; }
+.live-controls .live-lighting label { flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; margin: 8px 0; }
+.live-controls .live-lighting .lighting-check { justify-content: flex-start; }
+.live-controls .live-lighting .lighting-slider { display: grid; }
+.live-controls .live-lighting select { width: auto; max-width: 60%; }
+.live-controls .live-lighting input[type="color"] { width: 58px; height: 28px; }
+.expression-buttons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-bottom: 8px; }
+.expression-buttons button { display: flex; align-items: center; gap: 8px; text-align: left; }
+.expression-buttons button[aria-pressed="true"] { border-color: #3977d8; background: #e8f0fd; color: #1d4f9c; font-weight: 600; }
+.expression-buttons kbd { min-width: 1.4em; padding: 0 4px; border: 1px solid #c8d3e2; border-radius: 4px; font: 11px/1.5 ui-monospace, monospace; text-align: center; color: #5a6a80; background: #f6f8fb; }
+.live-expression { border: 1px solid #d5dfeb; border-radius: 12px; background: white; }
+.live-expression > summary { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 12px 16px; font-weight: 600; list-style: none; }
+.live-expression > summary::-webkit-details-marker { display: none; }
+.live-expression > summary::before { content: '▸'; }
+.live-expression[open] > summary::before { content: '▾'; }
+.expression-on { margin-left: auto; padding: 1px 7px; border-radius: 999px; background: #e8f0fd; color: #1d4f9c; font-size: 11px; font-weight: 600; }
+.live-expression-body { padding: 0 16px 16px; }
+.live-expression-body h3 { margin: 16px 0 4px; font-size: 13px; }
+.background-hint { margin-top: 8px; }
+.remote-help { margin: 0 0 4px; font-size: 12px; color: #4a5a70; }
+.remote-field { display: flex; gap: 6px; }
+.remote-field input { flex: 1; min-width: 0; font: 12px ui-monospace, monospace; padding: 6px 8px; border: 1px solid #c8d3e2; border-radius: 7px; }
+.remote-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; margin: 10px 0; }
+.live-expression-body small { display: block; color: #5a6a80; }
+.live-warning { margin: 0; padding: 12px 14px; border: 1px solid #e3b341; border-radius: 12px; background: #fff8e1; color: #6b4e00; font-size: 13px; line-height: 1.5; }
+.lighting-presets { padding: 0 16px 4px; }
+.lighting-presets h3 { margin: 4px 0 8px; font-size: 13px; }
+.preset-slots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-bottom: 8px; }
+.preset-slot { display: flex; gap: 4px; min-width: 0; }
+.preset-slot button { font-size: 12px; }
+.preset-slot button:first-child { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; text-align: left; white-space: nowrap; overflow: hidden; }
+.preset-slot button[aria-pressed="true"] { border-color: #3977d8; background: #e8f0fd; color: #1d4f9c; font-weight: 600; }
+.preset-slot kbd { padding: 0 4px; border: 1px solid #c8d3e2; border-radius: 4px; font: 11px/1.5 ui-monospace, monospace; color: #5a6a80; background: #f6f8fb; }
+.preset-swatch { flex: 1; height: 16px; border-radius: 4px; border: 1px solid #0003; }
+.preset-swatch.off { border-style: dashed; background: transparent; }
+.preset-save { flex: none; padding-inline: 8px; }
+.lighting-presets small { display: block; color: #5a6a80; line-height: 1.5; }
+.live-controls .live-lighting .lighting-presets label { flex-direction: column; align-items: stretch; gap: 4px; }

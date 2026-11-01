@@ -7,7 +7,7 @@ from kokoro_term.config import load_config, AppConfig, LLMConfig
 def test_load_default_config():
     config = load_config()
     assert config.active_character == "roxy"
-    assert config.llm.provider in ("gemini", "mock", "openai")
+    assert config.llm.provider in ("gemini", "mock", "openai", "ollama")
     assert config.llm.temperature == 0.7
     assert config.llm.max_tokens == 1024
 
